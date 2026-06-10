@@ -1032,8 +1032,37 @@ async function searchTMDB(query, resultContainerId) {
   container.hidden = false;
 
   try {
-    const res  = await fetch(`/api/tmdb-search?q=${encodeURIComponent(query)}`);
-    const data = await res.json();
+    let data = null;
+
+    // --- Próba 1: Cloudflare Worker (serwer z TMDB_API_KEY) ---
+    try {
+      const res = await fetch(`/api/tmdb-search?q=${encodeURIComponent(query)}`);
+      const json = await res.json();
+      if (!json.error && json.results) {
+        data = json;
+      }
+    } catch { /* Worker niedostępny – próbujemy bezpośrednio */ }
+
+    // --- Próba 2: bezpośrednie API z kluczem z Ustawień ---
+    if (!data && S.settings.tmdbKey) {
+      const apiRes = await fetch(
+        `https://api.themoviedb.org/3/search/tv?query=${encodeURIComponent(query)}&language=pl-PL&page=1`,
+        { headers: { 'Authorization': `Bearer ${S.settings.tmdbKey}`, 'Accept': 'application/json' } }
+      );
+      if (apiRes.ok) {
+        const json = await apiRes.json();
+        data = { results: json.results?.slice(0, 8) || [] };
+      }
+    }
+
+    // --- Brak klucza / błąd ---
+    if (!data) {
+      container.innerHTML = `<p style="padding:8px;color:var(--warn);font-size:12px">
+        Brak klucza TMDB. Dodaj <strong>API Read Access Token</strong> w
+        <a href="#" onclick="openSettings();return false;" style="color:var(--a)">Ustawieniach</a>.
+      </p>`;
+      return;
+    }
 
     if (!data.results?.length) {
       container.innerHTML = '<p style="padding:8px;color:var(--td);font-size:12px">Brak wyników.</p>';
