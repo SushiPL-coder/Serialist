@@ -13,7 +13,7 @@
     <a href="CONTRIBUTING.md">Contributing</a>
   </p>
 
-  <img src="https://img.shields.io/github/license/YOUR_HANDLE/serialist?style=flat-square&color=7C6BFE" alt="MIT License">
+  <img src="https://img.shields.io/github/license/SushiPL-coder/Serialist?style=flat-square&color=7C6BFE" alt="MIT License">
   <img src="https://img.shields.io/badge/PWA-ready-7C6BFE?style=flat-square" alt="PWA">
   <img src="https://img.shields.io/badge/Cloudflare-Pages-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Pages">
   <img src="https://img.shields.io/badge/vanilla-JS-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="Vanilla JS">
@@ -245,7 +245,7 @@ Zobacz [CONTRIBUTING.md](CONTRIBUTING.md)
     <a href="CONTRIBUTING.md">Contributing</a>
   </p>
 
-  <img src="https://img.shields.io/github/license/YOUR_HANDLE/serialist?style=flat-square&color=7C6BFE" alt="MIT License">
+  <img src="https://img.shields.io/github/license/SushiPL-coder/Serialist?style=flat-square&color=7C6BFE" alt="MIT License">
   <img src="https://img.shields.io/badge/PWA-ready-7C6BFE?style=flat-square" alt="PWA">
   <img src="https://img.shields.io/badge/Cloudflare-Pages-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Pages">
   <img src="https://img.shields.io/badge/vanilla-JS-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="Vanilla JS">
