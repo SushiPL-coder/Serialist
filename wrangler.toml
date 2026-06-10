@@ -12,7 +12,7 @@ bucket = "./public"
 # Create with: wrangler kv:namespace create PUSH_SUBS
 [[kv_namespaces]]
 binding  = "PUSH_SUBS"
-id       = "REPLACE_WITH_YOUR_KV_ID"
+id       = "00d8669a35a8405ea9f185ba65369a10"
 preview_id = "REPLACE_WITH_PREVIEW_KV_ID"
 
 # ── Cron trigger (push notifications every hour) ──────────────────────
