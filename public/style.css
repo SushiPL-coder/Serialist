@@ -30,13 +30,12 @@
 html, body {
   height: 100%;
   width: 100%;
-  overflow: hidden;           /* FIX: blokuje scroll prawo/lewo */
+  /* NIE używamy overflow:hidden tu — psuje klawiaturę iOS w modalach */
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--t);
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
-  -webkit-overflow-scrolling: touch;
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
@@ -52,27 +51,27 @@ svg { display: block; }
   max-width: 480px;
   margin: 0 auto;
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;         /* blokuje scroll poziomy */
+  overflow-y: hidden;
   background: var(--bg);
-  touch-action: pan-y;        /* FIX: blokuje scroll poziomy i zoom */
+  touch-action: pan-y;        /* blokuje pinch-zoom i poziomy drag */
 }
 
 /* Desktop: phone frame */
 @media (min-width: 520px) {
-  html { height: 100%; }
+  html, body { overflow: hidden; height: 100%; }
   body {
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: 100dvh;         /* FIX: prawidłowe centrowanie w pionie */
-    height: auto;
-    overflow: hidden;
+    min-height: 100dvh;
+    height: 100dvh;            /* FIX: pełna wysokość = centrowanie */
     padding: 24px;
-    /* FIX: estetyczne tło zamiast czarnego */
     background:
-      radial-gradient(ellipse 80% 60% at 35% 20%, rgba(124,107,254,.18) 0%, transparent 60%),
-      radial-gradient(ellipse 60% 40% at 70% 80%, rgba(80,50,200,.12) 0%, transparent 55%),
-      #06071A;
+      radial-gradient(ellipse 60% 75% at 50% 50%, rgba(124,107,254,.22) 0%, rgba(60,30,150,.06) 50%, transparent 80%),
+      radial-gradient(ellipse 40% 30% at 12% 6%,  rgba(160,120,255,.10) 0%, transparent 55%),
+      radial-gradient(ellipse 30% 25% at 88% 94%, rgba(80,60,200,.08)  0%, transparent 55%),
+      #07081C;
   }
   #app {
     height: min(844px, calc(100dvh - 48px));
@@ -81,9 +80,10 @@ svg { display: block; }
       0 0 0 10px #111320,
       0 0 0 12px rgba(255,255,255,.07),
       0 60px 100px rgba(0,0,0,.9),
-      0 0 80px var(--ag),
-      0 0 120px rgba(124,107,254,.15);
+      0 0 80px rgba(124,107,254,.30),
+      0 0 160px rgba(124,107,254,.12);
     overflow: hidden;
+    touch-action: pan-y;
   }
 }
 

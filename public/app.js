@@ -11,14 +11,16 @@
    ───────────────────────────────────────────────────────────────────── */
 
 const PLATFORMS = [
-  { key: 'netflix',  name: 'Netflix',   color: '#E50914', icon: 'tv' },
-  { key: 'hbo',      name: 'HBO Max',   color: '#B535F6', icon: 'tv' },
-  { key: 'disney',   name: 'Disney+',   color: '#0063E5', icon: 'tv' },
-  { key: 'prime',    name: 'Prime',     color: '#00A8E0', icon: 'tv' },
-  { key: 'apple',    name: 'Apple TV+', color: '#A0A5B0', icon: 'tv' },
-  { key: 'hulu',     name: 'Hulu',      color: '#1CE783', icon: 'tv' },
-  { key: 'youtube',  name: 'YouTube',   color: '#FF0000', icon: 'yt' },
-  { key: 'other',    name: 'Inne',      color: '#6B7280', icon: 'tv' },
+  { key: 'netflix',  name: 'Netflix',      color: '#E50914', icon: 'tv' },
+  { key: 'hbo',      name: 'HBO Max',      color: '#B535F6', icon: 'tv' },
+  { key: 'disney',   name: 'Disney+',      color: '#0063E5', icon: 'tv' },
+  { key: 'prime',    name: 'Prime',        color: '#00A8E0', icon: 'tv' },
+  { key: 'apple',    name: 'Apple TV+',    color: '#A0A5B0', icon: 'tv' },
+  { key: 'hulu',     name: 'Hulu',         color: '#1CE783', icon: 'tv' },
+  { key: 'sky',      name: 'SkyShowtime',  color: '#0050CC', icon: 'tv' },
+  { key: 'canal',    name: 'Canal+',       color: '#E2001A', icon: 'tv' },
+  { key: 'youtube',  name: 'YouTube',      color: '#FF0000', icon: 'yt' },
+  { key: 'other',    name: 'Inne',         color: '#6B7280', icon: 'tv' },
 ];
 
 const PLATFORM_GRADIENTS = {
@@ -28,6 +30,8 @@ const PLATFORM_GRADIENTS = {
   prime:    'linear-gradient(160deg,#000a1a,#001840)',
   apple:    'linear-gradient(160deg,#141414,#303030)',
   hulu:     'linear-gradient(160deg,#001a0a,#005028)',
+  sky:      'linear-gradient(160deg,#000d28,#001a66)',
+  canal:    'linear-gradient(160deg,#1a0000,#600008)',
   youtube:  'linear-gradient(160deg,#1a0000,#550000)',
   other:    'linear-gradient(160deg,#101020,#202040)',
 };
@@ -220,16 +224,25 @@ function generateEpisodeDates(series, fromStr, toStr) {
 }
 
 /** Get episode label for nth episode in series */
-function getEpisodeLabel(series, episodeDateStr) {
+function episodeId(seriesId, dateStr, index) {
+  // backward-compatible: index 0 lub brak → stary format bez sufiksu
+  if (index !== undefined && index > 0) return `${seriesId}__${dateStr}__${index}`;
+  return `${seriesId}__${dateStr}`;
+}
+
+/** Get episode label for nth episode in series */
+function getEpisodeLabel(series, episodeDateStr, releaseIndex = 0) {
   const since   = series.trackingSince || series.createdAt?.slice(0,10) || today();
   const datesTo = generateEpisodeDates(series, since, episodeDateStr);
-  const n       = datesTo.length; // 1-based index of this episode
+  const count   = Math.max(1, series.releaseCount || 1);
+  // pozycja odcinka: (index daty) * count + releaseIndex + 1
+  const n = (datesTo.length - 1) * count + releaseIndex + 1;
 
   if (series.platform === 'youtube') return `Odc. ${(series.startEpisode || 1) + n - 1}`;
 
   const startEp  = series.startEpisode || 1;
   const startSsn = series.startSeason  || 1;
-  const epsPerS  = series.episodesPerSeason || 10;
+  const epsPerS  = Math.max(1, series.episodesPerSeason || 10); // guard: brak div/0
 
   const totalEp  = startEp + n - 1;
   const season   = startSsn + Math.floor((totalEp - 1) / epsPerS);
@@ -237,8 +250,6 @@ function getEpisodeLabel(series, episodeDateStr) {
 
   return `S${String(season).padStart(2,'0')}E${String(episode).padStart(2,'0')}`;
 }
-
-function episodeId(seriesId, dateStr) { return `${seriesId}__${dateStr}`; }
 
 /* ─────────────────────────────────────────────────────────────────────
    5. EPISODE & BACKLOG LOGIC
@@ -254,13 +265,16 @@ function getBacklog() {
     const since = series.trackingSince || cutoffStr;
     const from  = since > cutoffStr ? since : cutoffStr;
     const dates = generateEpisodeDates(series, from, todayStr);
+    const count = Math.max(1, series.releaseCount || 1);
 
     dates.forEach(dateStr => {
-      if (dateStr >= todayStr) return; // only past
-      const eid    = episodeId(series.id, dateStr);
-      const record = S.episodes[eid];
-      if (!record || !record.watched) {
-        backlog.push({ series, dateStr, eid, label: getEpisodeLabel(series, dateStr) });
+      if (dateStr >= todayStr) return; // tylko przeszłe
+      for (let i = 0; i < count; i++) {
+        const eid    = episodeId(series.id, dateStr, count > 1 ? i : undefined);
+        const record = S.episodes[eid];
+        if (!record || !record.watched) {
+          backlog.push({ series, dateStr, eid, label: getEpisodeLabel(series, dateStr, i) });
+        }
       }
     });
   });
@@ -480,17 +494,19 @@ function getEpisodesForDay(date) {
   const ds = toDateStr(date);
   const result = [];
   S.series.forEach(series => {
-    const since  = series.trackingSince || ds;
-    const dates  = generateEpisodeDates(series, ds, ds);
+    const dates = generateEpisodeDates(series, ds, ds);
     if (dates.includes(ds)) {
-      const eid = episodeId(series.id, ds);
-      result.push({
-        series,
-        dateStr: ds,
-        eid,
-        label:   getEpisodeLabel(series, ds),
-        watched: !!(S.episodes[eid]?.watched),
-      });
+      const count = Math.max(1, series.releaseCount || 1);
+      for (let i = 0; i < count; i++) {
+        const eid = episodeId(series.id, ds, count > 1 ? i : undefined);
+        result.push({
+          series,
+          dateStr: ds,
+          eid,
+          label:   getEpisodeLabel(series, ds, i),
+          watched: !!(S.episodes[eid]?.watched),
+        });
+      }
     }
   });
   return result.sort((a, b) => a.series.time.localeCompare(b.series.time));
@@ -852,6 +868,7 @@ function openSeriesModal(id = null) {
     document.getElementById('inp-season').value      = series.startSeason || 1;
     document.getElementById('inp-start-ep').value    = series.startEpisode || 1;
     document.getElementById('inp-eps-per-season').value = series.episodesPerSeason || 10;
+    document.getElementById('inp-release-count').value  = series.releaseCount || 1;
     document.getElementById('inp-tracking-since').value = series.trackingSince || today();
     setToggle('toggle-notify', series.notify !== false);
     S.coverB64 = series.cover || null;
@@ -874,6 +891,7 @@ function openSeriesModal(id = null) {
     document.getElementById('inp-season').value = 1;
     document.getElementById('inp-start-ep').value = 1;
     document.getElementById('inp-eps-per-season').value = 10;
+    document.getElementById('inp-release-count').value  = 1;
     document.getElementById('inp-tracking-since').value = today();
     setToggle('toggle-notify', true);
     setSchedType('weekly');
@@ -915,7 +933,8 @@ async function saveSeriesModal() {
     notify,
     startSeason:     parseInt(document.getElementById('inp-season').value) || 1,
     startEpisode:    parseInt(document.getElementById('inp-start-ep').value) || 1,
-    episodesPerSeason: parseInt(document.getElementById('inp-eps-per-season').value) || 10,
+    episodesPerSeason: Math.max(1, parseInt(document.getElementById('inp-eps-per-season').value) || 10),
+    releaseCount:      Math.max(1, parseInt(document.getElementById('inp-release-count').value) || 1),
     trackingSince:   document.getElementById('inp-tracking-since').value || today(),
     cover:           S.coverB64,
     tmdbId:          S.tmdbId,

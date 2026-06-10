@@ -323,7 +323,19 @@
       </div>
       <div class="fg">
         <label class="fl" for="inp-eps-per-season">Odc. na sezon</label>
-        <input class="fi" id="inp-eps-per-season" type="number" value="10" min="1" max="99">
+        <input class="fi" id="inp-eps-per-season" type="number" value="10" min="1" max="999"
+               onchange="if(!this.value||parseInt(this.value)<1)this.value=1;">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="fg">
+        <label class="fl" for="inp-release-count">Odc. na datę</label>
+        <input class="fi" id="inp-release-count" type="number" value="1" min="1" max="50"
+               onchange="if(!this.value||parseInt(this.value)<1)this.value=1;">
+      </div>
+      <div class="fg" style="flex:2">
+        <p class="hint" style="padding-top:22px">1 = normalnie · 2+ = kilka odc. naraz · <em>cały sezon jednocześnie = liczba odcinków</em></p>
       </div>
     </div>
 
