@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<!--
+  SERIALIST — Open Source TV & YouTube Series Tracker
+  Author: SushiPL-coder | https://github.com/SushiPL-coder/Serialist
+  License: MIT
+-->
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#08091A">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Serialist">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon-192.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.svg">
+  <title>Serialist</title>
+  <link rel="preconnect" href="https://fonts.bunny.net">
+  <link href="https://fonts.bunny.net/css?family=outfit:400,500,600,700,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- ══ SVG Sprite ═══════════════════════════════════════════════════════ -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-tv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>
+  </symbol>
+  <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+  </symbol>
+  <symbol id="ic-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="8" r="4"/><path d="M6 20v-1a6 6 0 0 1 12 0v1"/>
+  </symbol>
+  <symbol id="ic-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+  </symbol>
+  <symbol id="ic-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+  </symbol>
+  <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+  </symbol>
+  <symbol id="ic-cl" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="15 18 9 12 15 6"/>
+  </symbol>
+  <symbol id="ic-cr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="9 18 15 12 9 6"/>
+  </symbol>
+  <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+  </symbol>
+  <symbol id="ic-upload" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/>
+    <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+  </symbol>
+  <symbol id="ic-repeat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+    <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+  </symbol>
+  <symbol id="ic-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+    <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+  </symbol>
+  <symbol id="ic-play" viewBox="0 0 24 24" fill="currentColor">
+    <polygon points="5 3 19 12 5 21 5 3"/>
+  </symbol>
+  <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </symbol>
+  <symbol id="ic-img" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+  </symbol>
+  <symbol id="ic-yt" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M22.5 6.4s-.3-1.9-1.1-2.7c-1-1.1-2.2-1.1-2.8-1.2C15.9 2.4 12 2.4 12 2.4s-3.9 0-6.6.1c-.6.1-1.8.1-2.8 1.2-.8.8-1.1 2.7-1.1 2.7S1.2 8.6 1.2 10.7v2c0 2.1.3 4.3.3 4.3s.3 1.9 1.1 2.7c1 1.1 2.4 1 3 1.1C7.8 21 12 21 12 21s3.9 0 6.6-.2c.6-.1 1.8-.1 2.8-1.2.8-.8 1.1-2.7 1.1-2.7s.3-2.2.3-4.3v-2C22.8 8.6 22.5 6.4 22.5 6.4zM9.7 15V9l7.6 3-7.6 3z"/>
+  </symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+  </symbol>
+  <symbol id="ic-edit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+  </symbol>
+  <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+    <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+  </symbol>
+  <symbol id="ic-inbox" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/>
+    <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+  </symbol>
+  <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+  </symbol>
+</svg>
+
+<!-- ══ App Shell ════════════════════════════════════════════════════════ -->
+<div id="app">
+
+  <!-- Header -->
+  <header class="hdr">
+    <div class="logo">
+      <div class="logo-mark"><svg width="20" height="20"><use href="#ic-tv"/></svg></div>
+      <div class="logo-txt">Serial<em>ist</em></div>
+    </div>
+    <div class="hbtns">
+      <button class="hbtn" id="btn-notif" aria-label="Powiadomienia">
+        <svg width="17" height="17"><use href="#ic-bell"/></svg>
+        <span class="pip" id="notif-pip" hidden></span>
+      </button>
+      <button class="hbtn" id="btn-settings" aria-label="Ustawienia">
+        <svg width="17" height="17"><use href="#ic-user"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Notification panel -->
+  <div class="notif-panel" id="notif-panel" role="region" aria-label="Nadchodzące odcinki">
+    <div class="nphead">
+      <span>Nadchodzące odcinki</span>
+      <button class="np-close" id="btn-close-notif">Zamknij</button>
+    </div>
+    <div id="notif-list"><p class="np-empty">Brak nadchodzących odcinków.</p></div>
+  </div>
+
+  <!-- Main scroll area -->
+  <main class="main" id="main">
+
+    <!-- ── Calendar Tab ──────────────────────────────────────────── -->
+    <section class="tab active" id="tab-calendar" role="tabpanel">
+
+      <div id="cal-alert-wrap"></div>
+
+      <nav class="wnav" aria-label="Nawigacja tygodnia">
+        <button class="wbtn" id="btn-prev-week" aria-label="Poprzedni tydzień">
+          <svg width="14" height="14"><use href="#ic-cl"/></svg>
+        </button>
+        <span class="wlabel" id="week-label"></span>
+        <button class="wbtn" id="btn-next-week" aria-label="Następny tydzień">
+          <svg width="14" height="14"><use href="#ic-cr"/></svg>
+        </button>
+      </nav>
+
+      <div class="dstrip" id="day-strip" role="tablist" aria-label="Dni tygodnia"></div>
+      <div id="day-content"></div>
+
+    </section>
+
+    <!-- ── Series Tab ────────────────────────────────────────────── -->
+    <section class="tab" id="tab-series" role="tabpanel">
+      <div class="tabhead">
+        <h2 class="tabtitle">Moje seriale</h2>
+        <span class="chip" id="series-count">0 tytułów</span>
+      </div>
+      <div id="series-list"></div>
+      <div class="empty-tab" id="series-empty" hidden>
+        <svg width="48" height="48"><use href="#ic-tv"/></svg>
+        <p>Nie śledzisz jeszcze żadnego serialu.</p>
+        <button class="btn-empty-cta" id="btn-series-add-first">Dodaj pierwszy serial</button>
+      </div>
+    </section>
+
+    <!-- ── Watchlist Tab ─────────────────────────────────────────── -->
+    <section class="tab" id="tab-watchlist" role="tabpanel">
+      <div class="tabhead">
+        <h2 class="tabtitle">Do obejrzenia</h2>
+        <span class="chip" id="wl-count">0 tytułów</span>
+      </div>
+      <div class="wl-grid" id="wl-grid"></div>
+      <div class="empty-tab" id="wl-empty" hidden>
+        <svg width="48" height="48"><use href="#ic-eye"/></svg>
+        <p>Twoja lista życzeń jest pusta.</p>
+        <button class="btn-empty-cta" id="btn-wl-add-first">Dodaj tytuł</button>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- FAB -->
+  <button class="fab" id="fab" aria-label="Dodaj serial">
+    <svg width="22" height="22"><use href="#ic-plus"/></svg>
+  </button>
+
+  <!-- Bottom Nav -->
+  <nav class="bnav" role="navigation" aria-label="Główna nawigacja">
+    <button class="ni active" data-tab="calendar">
+      <svg width="21" height="21"><use href="#ic-cal"/></svg>
+      <span>Kalendarz</span>
+    </button>
+    <button class="ni" data-tab="series">
+      <svg width="21" height="21"><use href="#ic-tv"/></svg>
+      <span>Seriale</span>
+    </button>
+    <button class="ni" data-tab="watchlist">
+      <svg width="21" height="21"><use href="#ic-eye"/></svg>
+      <span>Do obejrzenia</span>
+    </button>
+  </nav>
+
+</div><!-- /#app -->
+
+<!-- ══ Series Detail Overlay ════════════════════════════════════════════ -->
+<div class="detail-overlay" id="detail-overlay" aria-hidden="true">
+  <header class="det-hdr">
+    <button class="det-back" id="btn-detail-back" aria-label="Powrót">
+      <svg width="20" height="20"><use href="#ic-cl"/></svg>
+    </button>
+    <div class="det-cover" id="det-cover"></div>
+    <div class="det-meta">
+      <div class="det-plat-badge" id="det-plat-badge"></div>
+      <h2 class="det-title" id="det-title"></h2>
+      <p class="det-schedule" id="det-schedule"></p>
+    </div>
+    <div class="det-actions">
+      <button class="det-act-btn" id="btn-detail-edit" aria-label="Edytuj serial">
+        <svg width="16" height="16"><use href="#ic-edit"/></svg>
+      </button>
+      <button class="det-act-btn danger" id="btn-detail-delete" aria-label="Usuń serial">
+        <svg width="16" height="16"><use href="#ic-trash"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="det-stats" id="det-stats"></div>
+
+  <div class="det-ep-header">
+    <span class="sec-label">Historia odcinków</span>
+    <button class="btn-mark-all" id="btn-mark-all-watched">Zaznacz wszystkie jako obejrzane</button>
+  </div>
+
+  <div class="det-ep-list" id="det-ep-list"></div>
+</div>
+
+<!-- ══ Add/Edit Series Modal ════════════════════════════════════════════ -->
+<div class="overlay" id="overlay-series" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Dodaj serial">
+  <div class="modal" id="modal-series">
+    <div class="mhandle"></div>
+    <h2 class="mtitle" id="modal-series-title">Dodaj serial</h2>
+
+    <input type="hidden" id="edit-series-id">
+
+    <div class="fg">
+      <label class="fl" for="inp-title">Tytuł serialu</label>
+      <div class="tmdb-row">
+        <input class="fi" id="inp-title" type="text" placeholder="np. The Bear, Severance…" autocomplete="off">
+        <button class="tmdb-btn" id="btn-tmdb-search" type="button">
+          <svg width="14" height="14"><use href="#ic-search"/></svg>TMDB
+        </button>
+      </div>
+      <div class="tmdb-results" id="tmdb-results" hidden></div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Okładka</label>
+      <div class="upzone" id="upzone">
+        <div class="upico"><svg width="17" height="17"><use href="#ic-upload"/></svg></div>
+        <div class="uptxt">
+          <strong>Wgraj własną okładkę</strong>
+          JPG / PNG · max 2 MB — lub pobierz z TMDB powyżej
+        </div>
+        <input type="file" id="inp-cover" accept="image/jpeg,image/png,image/webp" style="display:none">
+      </div>
+      <div class="cover-preview" id="cover-preview" hidden>
+        <img id="cover-preview-img" alt="Podgląd okładki">
+        <button class="cover-remove" id="btn-cover-remove" type="button">
+          <svg width="14" height="14"><use href="#ic-x"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Platforma</label>
+      <div class="pplats" id="pplats"></div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Harmonogram odcinków</label>
+      <div class="stabs" id="sched-tabs">
+        <button class="stab active" data-type="weekly" type="button">
+          <svg width="13" height="13"><use href="#ic-cal"/></svg>Co tydzień
+        </button>
+        <button class="stab" data-type="interval" type="button">
+          <svg width="13" height="13"><use href="#ic-repeat"/></svg>Co X dni
+        </button>
+        <button class="stab" data-type="manual" type="button">
+          <svg width="13" height="13"><use href="#ic-list"/></svg>Ręczny
+        </button>
+      </div>
+
+      <div class="spanel active" id="sp-weekly">
+        <div class="dbtns" id="day-btns"></div>
+      </div>
+      <div class="spanel" id="sp-interval">
+        <div class="introw">
+          <input class="fi" id="inp-interval" type="number" value="3" min="1" max="90" style="width:70px;text-align:center">
+          <span>dni od poprzedniego odcinka</span>
+        </div>
+        <p class="hint">Serialist wyśle powiadomienie gdy zbliży się przewidywana data.</p>
+      </div>
+      <div class="spanel" id="sp-manual">
+        <div id="manual-dates-list"></div>
+        <button class="btn-add-date" id="btn-add-date" type="button">
+          <svg width="14" height="14"><use href="#ic-plus"/></svg> Dodaj datę
+        </button>
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="fg">
+        <label class="fl" for="inp-time">Godzina emisji</label>
+        <input class="fi" id="inp-time" type="time" value="21:00">
+      </div>
+      <div class="fg">
+        <label class="fl" for="inp-season">Aktualny sezon</label>
+        <input class="fi" id="inp-season" type="number" value="1" min="1" max="99">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="fg">
+        <label class="fl" for="inp-start-ep">Odcinek startowy</label>
+        <input class="fi" id="inp-start-ep" type="number" value="1" min="1" max="999" placeholder="np. 7">
+      </div>
+      <div class="fg">
+        <label class="fl" for="inp-eps-per-season">Odc. na sezon</label>
+        <input class="fi" id="inp-eps-per-season" type="number" value="10" min="1" max="99">
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Śledzenie od</label>
+      <input class="fi" id="inp-tracking-since" type="date">
+    </div>
+
+    <div class="fg">
+      <label class="fl">Powiadomienia push</label>
+      <div class="trow">
+        <div class="toggle" id="toggle-notify" role="switch" aria-checked="true"></div>
+        <span id="notify-label">30 min przed emisją</span>
+      </div>
+    </div>
+
+    <button class="bsave" id="btn-save-series" type="button">
+      <svg width="18" height="18"><use href="#ic-check"/></svg>
+      Zapisz serial
+    </button>
+  </div>
+</div>
+
+<!-- ══ Add Watchlist Modal ══════════════════════════════════════════════ -->
+<div class="overlay" id="overlay-wl" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Dodaj do listy">
+  <div class="modal" id="modal-wl">
+    <div class="mhandle"></div>
+    <h2 class="mtitle">Dodaj do listy</h2>
+
+    <div class="fg">
+      <label class="fl" for="wl-title">Tytuł</label>
+      <div class="tmdb-row">
+        <input class="fi" id="wl-title" type="text" placeholder="np. Silo, Dune: Prophecy…" autocomplete="off">
+        <button class="tmdb-btn" id="btn-wl-tmdb" type="button">
+          <svg width="14" height="14"><use href="#ic-search"/></svg>TMDB
+        </button>
+      </div>
+      <div class="tmdb-results" id="wl-tmdb-results" hidden></div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Platforma</label>
+      <div class="pplats" id="wl-pplats"></div>
+    </div>
+
+    <div class="row2">
+      <div class="fg">
+        <label class="fl" for="wl-season">Sezon</label>
+        <input class="fi" id="wl-season" type="number" value="1" min="1">
+      </div>
+      <div class="fg">
+        <label class="fl" for="wl-release">Premiera</label>
+        <input class="fi" id="wl-release" type="date">
+      </div>
+    </div>
+
+    <div class="fg">
+      <label class="fl" for="wl-notes">Notatki</label>
+      <textarea class="fi" id="wl-notes" rows="2" placeholder="Opcjonalne notatki…" style="resize:none"></textarea>
+    </div>
+
+    <button class="bsave" id="btn-save-wl" type="button">
+      <svg width="18" height="18"><use href="#ic-check"/></svg>
+      Zapisz
+    </button>
+  </div>
+</div>
+
+<!-- ══ Confirm Delete Dialog ════════════════════════════════════════════ -->
+<div class="overlay" id="overlay-confirm" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal confirm-modal">
+    <div class="mhandle"></div>
+    <h2 class="mtitle" style="font-size:18px" id="confirm-title">Usuń serial?</h2>
+    <p class="confirm-msg" id="confirm-msg"></p>
+    <div class="confirm-btns">
+      <button class="btn-cancel" id="btn-confirm-cancel">Anuluj</button>
+      <button class="btn-danger" id="btn-confirm-ok">Usuń</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Settings Modal ═══════════════════════════════════════════════════ -->
+<div class="overlay" id="overlay-settings" aria-hidden="true" role="dialog" aria-modal="true">
+  <div class="modal">
+    <div class="mhandle"></div>
+    <h2 class="mtitle">Ustawienia</h2>
+
+    <div class="fg">
+      <label class="fl" for="inp-vapid-key">VAPID Public Key</label>
+      <input class="fi" id="inp-vapid-key" type="text" placeholder="BxxxxxxxxxxxxxxxxxxxxA=">
+      <p class="hint">Klucz z Cloudflare Workers. Zobacz README → Push Notifications.</p>
+    </div>
+
+    <div class="fg">
+      <label class="fl" for="inp-tmdb-key">TMDB API Key (opcjonalne)</label>
+      <input class="fi" id="inp-tmdb-key" type="text" placeholder="eyJhbGc… lub Bearer token">
+      <p class="hint">Tylko jeśli hostujesz samodzielnie. Proxy Worker wystarczy na oficjalnym demo.</p>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Powiadomienia Push</label>
+      <div class="trow">
+        <div class="toggle" id="toggle-push-global" role="switch" aria-checked="false"></div>
+        <span id="push-status-label">Wyłączone</span>
+      </div>
+      <button class="btn-push-enable" id="btn-enable-push" type="button" style="margin-top:10px">
+        <svg width="14" height="14"><use href="#ic-bell"/></svg>
+        Włącz powiadomienia
+      </button>
+    </div>
+
+    <div class="settings-about">
+      <div class="about-logo">
+        <svg width="16" height="16"><use href="#ic-tv"/></svg>
+        Serialist
+      </div>
+      <p>Open-source PWA · MIT License</p>
+      <p>Stworzony przez <strong>SushiPL-coder</strong></p>
+      <a href="https://github.com/SushiPL-coder/Serialist" target="_blank" rel="noopener">GitHub →</a>
+    </div>
+
+    <button class="bsave" id="btn-save-settings" type="button">
+      <svg width="18" height="18"><use href="#ic-check"/></svg>
+      Zapisz ustawienia
+    </button>
+  </div>
+</div>
+
+<!-- ══ Toast ════════════════════════════════════════════════════════════ -->
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="app.js"></script>
+</body>
+</html>

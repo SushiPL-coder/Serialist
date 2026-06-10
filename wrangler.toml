@@ -1,0 +1,27 @@
+# Serialist — Cloudflare Workers & Pages config
+# Author: SushiPL-coder | MIT License
+
+name = "serialist"
+compatibility_date = "2024-01-01"
+
+# ── Pages deployment ──────────────────────────────────────────────────
+[site]
+bucket = "./public"
+
+# ── KV Namespaces ─────────────────────────────────────────────────────
+# Create with: wrangler kv:namespace create PUSH_SUBS
+[[kv_namespaces]]
+binding  = "PUSH_SUBS"
+id       = "REPLACE_WITH_YOUR_KV_ID"
+preview_id = "REPLACE_WITH_PREVIEW_KV_ID"
+
+# ── Cron trigger (push notifications every hour) ──────────────────────
+[triggers]
+crons = ["0 * * * *"]
+
+# ── Environment variables (set via Cloudflare dashboard or .dev.vars) ─
+# VAPID_PUBLIC_KEY  = "BxxxxA="
+# VAPID_PRIVATE_KEY = "yxxxxA="
+# VAPID_SUBJECT     = "mailto:you@example.com"
+# TMDB_API_KEY      = "eyJhbG..."
+# CRON_SECRET       = "random-secret-for-manual-trigger"
