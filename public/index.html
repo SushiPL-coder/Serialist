@@ -9,6 +9,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
   <meta name="theme-color" content="#08091A">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Serialist">
@@ -468,12 +469,14 @@
       <label class="fl">Konto · synchronizacja w chmurze</label>
 
       <div id="acc-logged-out">
+        <form id="form-login">
         <input class="fi" id="inp-login-user" type="text" placeholder="Login" autocomplete="username" autocapitalize="none" style="margin-bottom:8px">
         <input class="fi" id="inp-login-pass" type="password" placeholder="Hasło" autocomplete="current-password">
-        <button class="bsave" id="btn-login" type="button" style="margin-top:10px;padding:11px;font-size:13px">
+        <button class="bsave" id="btn-login" type="submit" style="margin-top:10px;padding:11px;font-size:13px">
           <svg width="14" height="14"><use href="#ic-user"/></svg>
           Zaloguj się
         </button>
+        </form>
         <p class="hint" style="margin-top:8px">Bez logowania działasz w <strong>trybie demo</strong> — dane są zapisywane tylko na tym urządzeniu (usunięcie PWA = utrata danych). Konto włącza synchronizację (Cloudflare D1) i powiadomienia push. Konta zakłada właściciel instancji — zobacz README na GitHubie, jak postawić własną.</p>
       </div>
 

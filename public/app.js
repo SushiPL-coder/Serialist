@@ -1691,7 +1691,8 @@ function wireEvents() {
   document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
 
   // Konto / synchronizacja
-  document.getElementById('btn-login').addEventListener('click', async () => {
+  document.getElementById('form-login').addEventListener('submit', async e => {
+    e.preventDefault();
     const u = document.getElementById('inp-login-user').value.trim();
     const p = document.getElementById('inp-login-pass').value;
     if (!u || !p) { showToast('Podaj login i hasło'); return; }
@@ -1708,9 +1709,6 @@ function wireEvents() {
     } finally {
       btn.disabled = false;
     }
-  });
-  document.getElementById('inp-login-pass').addEventListener('keydown', e => {
-    if (e.key === 'Enter') document.getElementById('btn-login').click();
   });
   document.getElementById('btn-logout').addEventListener('click', () => {
     Auth.logout();
