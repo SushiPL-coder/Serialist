@@ -1,133 +1,297 @@
-# 📺 Serialist
+<div align="center">
+  <img src="public/icons/icon-192.svg" width="80" alt="Serialist icon">
 
-**Open-source TV series & YouTube release tracker — installable PWA.**
+  <h1>Serialist</h1>
 
-Track weekly shows, interval-based releases and manual air dates, tick off watched episodes, keep a catch-up backlog and a watchlist of upcoming premieres. Built with Vanilla JS, IndexedDB and Cloudflare Pages — no frameworks, no build step.
+  <p>Twój osobisty tracker seriali TV i kanałów YouTube.<br>
+  Kalendarz tygodniowy · Śledzenie obejrzanych odcinków · Synchronizacja w chmurze · Push notifications · TMDB</p>
 
-🇵🇱 [Wersja polska README](README.pl.md)
+  <p>
+    <a href="#demo">Demo</a> ·
+    <a href="#instalacja-self-hosting">Instalacja</a> ·
+    <a href="#konfiguracja">Konfiguracja</a> ·
+    <a href="CONTRIBUTING.md">Contributing</a>
+  </p>
 
----
-
-## ✨ Try the demo
-
-**https://serialist.pages.dev**
-
-The public site runs in **demo mode**: everything is stored locally on your device (IndexedDB), nothing is sent anywhere. To enable TMDB poster/title search in the demo, paste your own free TMDB **API Read Access Token** in *Settings* (themoviedb.org → Settings → API).
-
-> ⚠️ Demo mode = local data only. On iOS, deleting the PWA from the home screen deletes its data. Use *Settings → Export JSON* for backups — or self-host with accounts and cloud sync (below).
-
-Login, cloud sync and push notifications are reserved for accounts created by the instance owner. Want them for yourself? **Self-host your own instance — it's free** (Cloudflare free tier) and takes ~15 minutes.
-
----
-
-## 🚀 Features
-
-- 📅 **Week calendar** with day strip, episode cards and watch toggles
-- 🔁 **Three schedule types**: weekly (pick days), interval (every N days), manual dates
-- 🧮 Automatic episode numbering (S/E), multi-episode drops, season lengths
-- 🕳️ **Backlog** — missed episodes from the last 30 days
-- 🔖 **Watchlist** for upcoming premieres with release countdown
-- 🔍 **TMDB search** — titles + posters (server-side key or your own)
-- ☁️ **Optional cloud sync** (Cloudflare D1) — data survives reinstall, syncs across devices
-- 🔔 **Web Push** — notification up to 1 h before an episode airs (RFC 8291/8292, works on iOS 16.4+)
-- 📱 Installable PWA, offline-first, iOS & Android friendly (incl. keyboard-aware bottom sheets)
-- 🆓 100% free to run: Cloudflare Pages + Functions + D1 free tier
+  <img src="https://img.shields.io/github/license/SushiPL-coder/Serialist?style=flat-square&color=7C6BFE" alt="MIT License">
+  <img src="https://img.shields.io/badge/PWA-ready-7C6BFE?style=flat-square" alt="PWA">
+  <img src="https://img.shields.io/badge/Cloudflare-Pages%20%2B%20D1-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Pages + D1">
+  <img src="https://img.shields.io/badge/vanilla-JS-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="Vanilla JS">
+</div>
 
 ---
 
-## 🛠️ Self-hosting (full setup)
+> 🇬🇧 [English version below](#english) · 🇵🇱 Polska wersja poniżej
 
-Everything runs on Cloudflare's free tier. No CLI required — dashboard only.
+---
 
-### 1. Deploy to Cloudflare Pages
+## O aplikacji
 
-1. Fork this repository.
-2. Cloudflare Dashboard → **Workers & Pages → Create → Pages → Connect to Git** → pick your fork.
-3. Build settings: no framework, **build output directory: `public`**. Deploy.
+Serialist to aplikacja dla wszystkich, którzy śledzą wiele seriali TV lub kanałów YouTube jednocześnie i chcą mieć to wszystko pod kontrolą — bez zapisków w notatniku, bez przekopywania historii oglądania.
 
-The app already works in demo mode at this point.
+Dodajesz seriale, które oglądasz lub chcesz obejrzeć. Określasz harmonogram emisji. Aplikacja pokazuje Ci w kalendarzu tygodniowym kiedy wychodzą nowe odcinki, zaznaczasz co już widziałeś, a lista "do nadrobienia" zbiera wszystko, co Ci umknęło. Powiadomienia push przypomną Ci do godziny przed emisją — żebyś nie przegapił premiery.
 
-### 2. Create the D1 database (accounts + sync + push)
+**Tryb demo (bez logowania):** wszystkie dane zostają na Twoim urządzeniu (IndexedDB) — zero kont, zero chmury. Tak działa publiczna instancja [serialist.pages.dev](https://serialist.pages.dev).
 
-1. Dashboard → **Storage & Databases → D1 → Create** → name: `serialist-db`.
-2. Open the database → **Console** → paste the contents of [`schema.sql`](schema.sql) → Execute.
-3. Pages project → **Settings → Bindings → Add → D1 database**:
+**Tryb z kontem (self-hosting):** opcjonalne logowanie włącza automatyczną synchronizację z Cloudflare D1 — dane przeżywają reinstalację PWA i synchronizują się między urządzeniami, a serwer wysyła prawdziwe powiadomienia o konkretnych odcinkach. Konta zakłada właściciel instancji (brak otwartej rejestracji).
+
+## Funkcje
+
+- **Kalendarz tygodniowy** — widok 7 dni z kolorowymi oznaczeniami platform
+- **Śledzenie obejrzanych** — zaznaczaj odcinki jako obejrzane, śledź postęp sezonu
+- **Do nadrobienia** — automatyczna lista odcinków, które przegapiłeś (30 dni wstecz)
+- **YouTube support** — harmonogram "co X dni" idealny dla kanałów YT
+- **TMDB integration** — wyszukaj serial, pobierz okładkę automatycznie
+- **Synchronizacja w chmurze** *(opcjonalna)* — Cloudflare D1, last-write-wins, auto-sync 3 s po każdej zmianie
+- **Push notifications** — powiadomienie do godziny przed emisją konkretnego odcinka (działa też na iOS 16.4+)
+- **PWA** — instalujesz jak aplikację, działa offline, klawiatura nie zasłania pól
+- **Watchlist** — osobna zakładka na seriale do obejrzenia w przyszłości
+- **Eksport / import JSON** — pełna kontrola nad danymi
+
+## Stos technologiczny
+
+| Warstwa   | Technologia               | Licencja  |
+|-----------|---------------------------|-----------|
+| Frontend  | Vanilla JS + Web APIs     | —         |
+| CSS       | Custom CSS, system fonts  | —         |
+| Ikony     | Lucide Icons (inline SVG) | MIT       |
+| Fonty     | Outfit via Bunny Fonts    | OFL       |
+| Hosting   | Cloudflare Pages          | Free tier |
+| API       | Cloudflare Pages Functions| —         |
+| Baza      | Cloudflare D1 (SQLite)    | Free tier |
+| Push      | Web Push API + VAPID (RFC 8291/8292) | — |
+| Okładki   | TMDB API                  | ToS       |
+| Storage   | IndexedDB (native)        | —         |
+
+Żadnych frameworków JS. Żadnych bundlerów. Żadnych node_modules w runtime. Szyfrowanie push napisane od zera na Web Crypto, zweryfikowane na wektorze testowym z RFC 8291.
+
+---
+
+## Demo
+
+```
+https://serialist.pages.dev
+```
+
+Publiczna instancja działa w trybie demo — dane tylko lokalnie na Twoim urządzeniu. Aby działało wyszukiwanie TMDB, wklej w *Ustawieniach* własny darmowy **API Read Access Token** ([themoviedb.org](https://www.themoviedb.org) → Settings → API). Logowanie, synchronizacja i push są dostępne na własnej instancji (niżej).
+
+---
+
+## Instalacja (self-hosting)
+
+### Wymagania
+
+- Konto Cloudflare (darmowe)
+- Konto GitHub
+- Przeglądarka — to wszystko, klucze VAPID wygenerujesz w konsoli F12 (bez Node.js)
+
+### 1. Fork i deploy na Cloudflare Pages
+
+1. Zrób fork tego repozytorium
+2. **dash.cloudflare.com → Workers & Pages → Create → Pages → Connect to Git**
+3. Build settings:
+   - Framework preset: `None`
+   - Build command: *(puste)*
+   - Build output directory: `public`
+4. **Save and Deploy** — aplikacja działa już w trybie demo
+
+### 2. Baza D1 (konta + synchronizacja + push)
+
+1. Dashboard → **Storage & Databases → D1 → Create** → nazwa: `serialist-db`
+2. Otwórz bazę → **Console** → wklej całą zawartość [`schema.sql`](schema.sql) → **Execute**
+3. Projekt Pages → **Settings → Bindings → Add → D1 database**:
    - Variable name: `DB`
    - Database: `serialist-db`
 
-### 3. Configure variables
+---
 
-Pages project → **Settings → Variables and secrets** (Production):
+## Konfiguracja
 
-| Name | Type | Value |
+### Generowanie kluczy i sekretów (w przeglądarce, bez Node)
+
+Otwórz konsolę przeglądarki (F12 → Console) i wklej:
+
+```js
+(async () => {
+  const kp  = await crypto.subtle.generateKey({ name:'ECDSA', namedCurve:'P-256' }, true, ['sign','verify']);
+  const pub = new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  const b64u = a => btoa(String.fromCharCode(...a)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const rand = n => b64u(crypto.getRandomValues(new Uint8Array(n)));
+  console.log('VAPID_PUBLIC_KEY: ', b64u(pub));
+  console.log('VAPID_PRIVATE_KEY:', jwk.d);
+  console.log('CRON_SECRET:      ', rand(24));
+  console.log('AUTH_SECRET:      ', rand(48));
+})();
+```
+
+(Możesz też klasycznie: `npx web-push generate-vapid-keys` — format jest identyczny.)
+
+### Zmienne w Cloudflare Pages
+
+`Projekt Pages → Settings → Variables and secrets` (Production):
+
+| Nazwa | Typ | Wartość |
 |---|---|---|
-| `AUTH_SECRET` | Secret | Long random string (40+ chars) — signs login tokens |
-| `AUTH_USERS` | Secret | Accounts: `alice:Str0ngPass;bob:OtherPass` |
-| `VAPID_PUBLIC_KEY` | Plaintext | From `npx web-push generate-vapid-keys` |
-| `VAPID_PRIVATE_KEY` | Secret | From the **same** generated pair |
-| `VAPID_SUBJECT` | Secret | `mailto:you@example.com` |
-| `CRON_SECRET` | Secret | Random string protecting `/api/push-send` |
-| `TMDB_API_KEY` | Secret | *(optional)* TMDB Read Access Token for server-side search |
+| `AUTH_SECRET` | Secret | losowy ciąg 40+ znaków (z generatora wyżej) |
+| `AUTH_USERS` | Secret | konta: `ania:Silne#Haslo;bartek:InneHaslo` |
+| `VAPID_PUBLIC_KEY` | Plaintext | z generatora wyżej |
+| `VAPID_PRIVATE_KEY` | Secret | z **tej samej pary** |
+| `VAPID_SUBJECT` | Secret | `mailto:ty@example.com` |
+| `CRON_SECRET` | Secret | losowy ciąg chroniący `/api/push-send` |
+| `TMDB_API_KEY` | Secret | *(opcjonalnie)* TMDB Read Access Token |
 
-Generate VAPID keys locally with:
+> ⚠️ Oba klucze VAPID muszą pochodzić z jednej pary. Po dodaniu zmiennych/bindingów zrób **Redeploy** (Deployments → Redeploy) — bez tego nie wejdą w życie. Po rotacji kluczy VAPID każde urządzenie musi włączyć powiadomienia od nowa (iOS: usuń PWA → restart → zainstaluj → włącz push).
+
+### Cron powiadomień (co godzinę)
+
+Cloudflare Pages nie ma wbudowanych cronów — użyj darmowego [cron-job.org](https://cron-job.org):
+
+- URL: `https://TWOJ-PROJEKT.pages.dev/api/push-send?secret=TWOJ_CRON_SECRET`
+- Harmonogram: co godzinę (minuta 0) · Metoda: GET
+
+Endpoint zwraca JSON `{"ok":true,"checked":…,"sent":…}`. Do testów: dopisz `&test=1` — wyśle wszystko z harmonogramu od razu.
+
+### TMDB API (okładki seriali)
+
+1. Zarejestruj się na [themoviedb.org](https://www.themoviedb.org)
+2. `Account → Settings → API → Create → Developer`
+3. Skopiuj **API Read Access Token (v4)** → zmienna `TMDB_API_KEY` w Cloudflare
+
+Proxy (`/api/tmdb-search`) ukrywa klucz przed klientem. Użytkownicy demo mogą wpisać własny token w Ustawieniach aplikacji.
+
+### Pierwsze logowanie
+
+Ustawienia → **Konto** → login i hasło z `AUTH_USERS`. Od tej chwili dane synchronizują się automatycznie; na iOS zainstaluj PWA (Udostępnij → *Do ekranu początkowego*), otwórz z ikony i włącz powiadomienia. Dzwoneczek 🔔 włączasz osobno przy każdym serialu.
+
+---
+
+## Struktura projektu
+
+```
+serialist/
+├── public/
+│   ├── index.html        ← HTML shell + SVG sprite
+│   ├── style.css         ← Wszystkie style
+│   ├── app.js            ← Logika aplikacji (IDB, kalendarz, sync, push)
+│   ├── sw.js             ← Service Worker
+│   ├── manifest.json     ← PWA manifest
+│   └── icons/            ← SVG ikony aplikacji
+├── functions/
+│   └── api/
+│       ├── config.js         ← Publiczny klucz VAPID (auto-konfiguracja)
+│       ├── auth-login.js     ← Logowanie (AUTH_USERS → JWT HS256, 90 dni)
+│       ├── sync.js           ← Synchronizacja stanu z D1 (LWW)
+│       ├── tmdb-search.js    ← TMDB proxy
+│       ├── push-subscribe.js ← Subskrypcje push per użytkownik (D1)
+│       └── push-send.js      ← Wysyłka push (RFC 8291/8292, endpoint crona)
+├── schema.sql            ← Schemat bazy D1
+├── wrangler.toml         ← Dokumentacja konfiguracji Pages
+├── LICENSE               ← MIT
+├── CONTRIBUTING.md
+└── README.md
+```
+
+---
+
+## Lokalny development
 
 ```bash
-npx web-push generate-vapid-keys
+npx wrangler pages dev public --d1 DB=serialist-db --compatibility-date=2024-01-01
+
+# Lokalny plik z sekretami (nie commituj!)
+# .dev.vars
+AUTH_SECRET=dev-secret
+AUTH_USERS=dev:dev
+VAPID_PUBLIC_KEY=BxxxxA
+VAPID_PRIVATE_KEY=yxxxxA
+TMDB_API_KEY=eyJhbG...
 ```
-
-> ⚠️ The two VAPID keys **must come from the same generated pair**, and the private key must be the raw base64url form printed by web-push (≈43 chars). If you ever rotate the keys, every device must re-enable notifications (iOS: remove the PWA, reboot, reinstall, log in, enable push again).
-
-**Redeploy** the project after adding bindings/variables (Deployments → Redeploy).
-
-### 4. Hourly push cron
-
-Cloudflare Pages has no built-in cron, so use a free external cron such as [cron-job.org](https://cron-job.org):
-
-- URL: `https://YOUR-PROJECT.pages.dev/api/push-send?secret=YOUR_CRON_SECRET`
-- Schedule: **every hour** (e.g. minute 0)
-- Method: GET
-
-The endpoint returns JSON (`{"ok":true,"checked":…,"sent":…}`) you can use for monitoring.
-
-### 5. Use it
-
-1. Open your instance → **Settings → Account** → log in with a user from `AUTH_USERS`.
-2. Your data now syncs to D1 automatically (3 s after every change, on focus, on reconnect). Reinstalling the PWA no longer loses anything — just log in again.
-3. (iOS) Install the PWA: Share → *Add to Home Screen*, open it from the icon, then **Settings → Enable notifications**. Push requires iOS 16.4+ and the installed PWA.
-4. Enable the 🔔 bell on each series you want alerts for.
 
 ---
 
-## 🧱 Architecture
+## Autor
 
-```
-public/                  Vanilla JS PWA (IndexedDB = primary store, offline-first)
-functions/api/
-  config.js              GET  /api/config          public VAPID key + capabilities
-  auth/login.js          POST /api/auth/login      AUTH_USERS check → HS256 JWT (90 days)
-  sync.js                GET/PUT /api/sync         whole-state LWW sync to D1; covers in a
-                                                   separate table; uploads 14-day episode schedule
-  push-subscribe.js      POST/DELETE               per-user push subscriptions (D1)
-  push-send.js           GET /api/push-send        cron endpoint; RFC 8291 aes128gcm +
-                                                   RFC 8292 VAPID, pure Web Crypto, no deps
-schema.sql               D1 schema
-```
+Stworzony przez **SushiPL-coder**
+Projekt w pełni open-source na licencji MIT. Pull requesty mile widziane!
 
-**Sync model:** the client keeps a `lastChange` timestamp; on startup it pulls the server state and the newer side wins (whole-state last-write-wins). Simple, predictable, ideal for one user on a few devices. Demo mode (not logged in) never touches the network for data.
+## Contributing
 
-**Push pipeline:** during every sync the client uploads the next 14 days of episodes (for series with 🔔 enabled) including the device's timezone offset → the hourly cron picks entries airing within the next 60 minutes → encrypts a payload per device subscription → marks the entry as notified. Expired subscriptions (HTTP 404/410) are removed automatically.
+Zobacz [CONTRIBUTING.md](CONTRIBUTING.md)
 
-The push encryption is implemented from scratch on Web Crypto and verified against the official RFC 8291 Appendix A test vector.
+## License
+
+[MIT](LICENSE) © 2026 SushiPL-coder
 
 ---
+---
 
-## 🔒 Security & privacy notes
+<a name="english"></a>
 
-- No open registration: accounts exist only in `AUTH_USERS`. The demo never stores anything server-side.
-- Login issues an HMAC-SHA256 (HS256) token valid 90 days; data endpoints require it.
-- A TMDB token entered in demo mode stays in local IndexedDB only.
-- Covers are recompressed client-side (max 600 px JPEG) before storage/sync.
+<div align="center">
+  <img src="public/icons/icon-192.svg" width="80" alt="Serialist icon">
 
-## 📄 License
+  <h1>Serialist</h1>
 
-MIT — see [LICENSE](LICENSE). Created by **SushiPL-coder**.
+  <p>Your personal tracker for TV shows and YouTube channels.<br>
+  Weekly Calendar · Episode Tracking · Cloud Sync · Push Notifications · TMDB</p>
+
+  <p>
+    <a href="#demo-en">Demo</a> ·
+    <a href="#installation-self-hosting">Installation</a> ·
+    <a href="#configuration">Configuration</a> ·
+    <a href="CONTRIBUTING.md">Contributing</a>
+  </p>
+
+  <img src="https://img.shields.io/github/license/SushiPL-coder/Serialist?style=flat-square&color=7C6BFE" alt="MIT License">
+  <img src="https://img.shields.io/badge/PWA-ready-7C6BFE?style=flat-square" alt="PWA">
+  <img src="https://img.shields.io/badge/Cloudflare-Pages%20%2B%20D1-F38020?style=flat-square&logo=cloudflare&logoColor=white" alt="Cloudflare Pages + D1">
+  <img src="https://img.shields.io/badge/vanilla-JS-F7DF1E?style=flat-square&logo=javascript&logoColor=black" alt="Vanilla JS">
+</div>
+
+## About
+
+Serialist is for everyone who follows many TV shows or YouTube channels at once and wants it all under control — no notebook scribbles, no digging through watch history.
+
+Add the shows you watch, define their release schedule, and the weekly calendar shows you when new episodes drop. Tick off what you've seen; the catch-up backlog collects everything you missed. Push notifications remind you up to an hour before air time.
+
+**Demo mode (no login):** all data stays on your device (IndexedDB) — no accounts, no cloud. That's how the public instance at [serialist.pages.dev](https://serialist.pages.dev) works.
+
+**Account mode (self-hosted):** optional login enables automatic sync with Cloudflare D1 — data survives PWA reinstalls and syncs across devices, and the server sends real per-episode push notifications. Accounts are created by the instance owner (no open registration).
+
+## Features
+
+- **Weekly calendar** — 7-day view with platform color coding
+- **Watch tracking** — mark episodes watched, track season progress
+- **Catch-up backlog** — automatic list of episodes you missed (last 30 days)
+- **YouTube support** — "every X days" schedules, perfect for YT channels
+- **TMDB integration** — search a show, fetch the poster automatically
+- **Cloud sync** *(optional)* — Cloudflare D1, last-write-wins, auto-sync 3 s after every change
+- **Push notifications** — alert up to 1 h before a specific episode airs (incl. iOS 16.4+)
+- **PWA** — install like an app, works offline, keyboard never covers inputs
+- **Watchlist** — a separate tab for shows to watch in the future
+- **JSON export / import** — full control over your data
+
+<a name="demo-en"></a>
+
+## Demo
+
+```
+https://serialist.pages.dev
+```
+
+The public instance runs in demo mode — local data only. For TMDB search, paste your own free **API Read Access Token** in *Settings*.
+
+## Installation (self-hosting)
+
+1. **Fork** this repo → Cloudflare **Workers & Pages → Create → Pages → Connect to Git** → framework `None`, build output `public` → Deploy (demo mode works now).
+2. **D1**: Storage & Databases → D1 → Create `serialist-db` → Console → paste [`schema.sql`](schema.sql) → Execute. Then Pages → Settings → Bindings → D1: variable name `DB`.
+3. **Variables** (Pages → Settings → Variables and secrets): `AUTH_SECRET`, `AUTH_USERS` (`alice:pass;bob:pass`), `VAPID_PUBLIC_KEY` (plaintext), `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `CRON_SECRET`, optional `TMDB_API_KEY`. Generate keys with the browser-console snippet in the Polish section above or `npx web-push generate-vapid-keys`. **Redeploy** afterwards.
+4. **Cron**: Pages has no built-in cron — create an hourly job at [cron-job.org](https://cron-job.org) calling `https://YOUR-PROJECT.pages.dev/api/push-send?secret=YOUR_CRON_SECRET` (add `&test=1` for instant test sends).
+5. Log in via *Settings → Account*, install the PWA on iOS (Share → Add to Home Screen), enable notifications, and turn on the 🔔 bell per series.
+
+Push encryption is implemented from scratch on Web Crypto (RFC 8291 aes128gcm + RFC 8292 VAPID) and verified against the official RFC 8291 test vector. Stale subscriptions (HTTP 404/410) are cleaned up automatically.
+
+## License
+
+[MIT](LICENSE) © 2026 SushiPL-coder

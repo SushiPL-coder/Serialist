@@ -5,6 +5,19 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [0.4.1] – 2026-06-11
+
+### Fixed
+- **Login returned 405** – the nested `functions/api/auth/login.js` folder was easy to lose when uploading via the GitHub web UI (POST then hit a static asset → 405). The endpoint is now a flat file: `functions/api/auth-login.js` → `POST /api/auth-login`.
+- **Modals impossible to dismiss on tall phones** – the bottom sheet could fill nearly the whole screen, leaving only a sliver of backdrop under the iOS status bar. Every modal now has a sticky ✕ close button, and tapping the drag handle also closes it.
+- **iOS install banner never reappearing** – the "dismissed" flag was permanent (and survived in Safari localStorage across PWA reinstalls). It now expires after 14 days; the legacy flag value is treated as expired.
+
+### Changed
+- README restored to the original single-file bilingual layout (logo header, badges, nav links) with v0.4.x content; `README.pl.md` removed.
+- Service worker cache bumped to `serialist-v4`.
+
+---
+
 ## [0.4.0] – 2026-06-11
 
 ### Added

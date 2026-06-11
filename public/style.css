@@ -572,6 +572,14 @@ body.kb-open .overlay.open .modal { transition: transform .18s ease-out, max-hei
 .acc-row  { display: flex; align-items: center; font-size: 14px; font-weight: 500; }
 .acc-dot  { width: 8px; height: 8px; border-radius: 50%; background: var(--ok, #22c55e); margin-right: 8px; flex-shrink: 0; }
 .mhandle { width: 36px; height: 4px; background: var(--bs); border-radius: 2px; margin: 12px auto 20px; }
+.mclose {
+  position: sticky; top: 8px; float: right; z-index: 6;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: var(--card); border: 1px solid var(--bs); color: var(--tm);
+  display: flex; align-items: center; justify-content: center;
+  margin: -6px -4px 0 0; transition: all .18s;
+}
+.mclose:hover { border-color: var(--a); color: var(--a); }
 .mtitle { font-size: 21px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 20px; }
 
 /* ── Form Elements ─────────────────────────────────────────────────── */

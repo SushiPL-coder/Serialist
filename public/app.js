@@ -182,7 +182,7 @@ const Auth = {
   get loggedIn() { return !!this.token; },
 
   async login(username, password) {
-    const res = await fetch('/api/auth/login', {
+    const res = await fetch('/api/auth-login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -1723,10 +1723,11 @@ function wireEvents() {
     showToast('Zsynchronizowano');
   });
 
-  // Close overlays on background click
+  // Close overlays on background click + tap on the drag handle
   ['overlay-series','overlay-wl','overlay-confirm','overlay-settings'].forEach(id => {
-    document.getElementById(id).addEventListener('click', e => {
-      if (e.target === document.getElementById(id)) closeOverlay(id);
+    const ov = document.getElementById(id);
+    ov.addEventListener('click', e => {
+      if (e.target === ov || e.target.classList.contains('mhandle')) closeOverlay(id);
     });
   });
 
@@ -1949,7 +1950,9 @@ function initInstallBanner() {
                      matchMedia('(display-mode: standalone)').matches ||
                      matchMedia('(display-mode: fullscreen)').matches;
   if (standalone) return;
-  if (localStorage.getItem('serialist_install_dismissed')) return;
+  // Flaga odrzucenia wygasa po 14 dniach (stary format '1' = od razu wygasła)
+  const dismissedAt = Number(localStorage.getItem('serialist_install_dismissed')) || 0;
+  if (dismissedAt && Date.now() - dismissedAt < 14 * 86400000) return;
 
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
@@ -1969,7 +1972,7 @@ function initInstallBanner() {
   window.addEventListener('appinstalled', () => {
     document.getElementById('android-banner')?.classList.remove('show');
     _installPrompt = null;
-    localStorage.setItem('serialist_install_dismissed', '1');
+    localStorage.setItem('serialist_install_dismissed', String(Date.now()));
     showToast('✅ Serialist zainstalowany!');
   });
 }
@@ -1988,7 +1991,7 @@ function androidInstall() {
 function dismissInstallBanner() {
   document.getElementById('ios-banner')?.classList.remove('show');
   document.getElementById('android-banner')?.classList.remove('show');
-  localStorage.setItem('serialist_install_dismissed', '1');
+  localStorage.setItem('serialist_install_dismissed', String(Date.now()));
 }
 
 // ── Data Export / Import ─────────────────────────────────────────────
