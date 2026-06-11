@@ -1587,13 +1587,22 @@ function applyUpdate() {
   }
 }
 
-// ── iOS pinch-zoom prevention ────────────────────────────────────────
-// SolidOffer approach: pure CSS (touch-action:manipulation + body overflow:hidden)
-// Żaden JS nie jest potrzebny — CSS wystarczy
+// ── iOS pinch-zoom + scroll prevention ──────────────────────────────
 function initZoomPrevention() {
-  // Tylko blokada gesturestart dla starszych Safari
-  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  // gesturestart/change — Safari legacy pinch-zoom block
+  document.addEventListener('gesturestart',  e => e.preventDefault(), { passive: false });
   document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+
+  // iOS czasem przesuwa window.scrollY mimo body{overflow:hidden} gdy focus na input
+  // Reset do 0 przy każdej próbie scrolla — identycznie jak SolidOffer
+  window.addEventListener('scroll', () => {
+    if (window.scrollX !== 0 || window.scrollY !== 0) window.scrollTo(0, 0);
+  }, { passive: true });
+
+  // Reset po opuszczeniu inputa (keyboard hide)
+  document.addEventListener('focusout', () => {
+    requestAnimationFrame(() => window.scrollTo(0, 0));
+  }, true);
 }
 
 // ── PWA Install Banner ───────────────────────────────────────────────
