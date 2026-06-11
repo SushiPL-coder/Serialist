@@ -1588,19 +1588,12 @@ function applyUpdate() {
 }
 
 // ── iOS pinch-zoom prevention ────────────────────────────────────────
+// SolidOffer approach: pure CSS (touch-action:manipulation + body overflow:hidden)
+// Żaden JS nie jest potrzebny — CSS wystarczy
 function initZoomPrevention() {
-  // Blokuje pinch zoom (iOS ignoruje user-scalable=no)
-  document.addEventListener('touchmove', e => {
-    if (e.touches.length > 1) e.preventDefault();
-  }, { passive: false });
-
-  // Blokuje double-tap zoom
-  let lastTouch = 0;
-  document.addEventListener('touchend', e => {
-    const now = Date.now();
-    if (now - lastTouch < 300) e.preventDefault();
-    lastTouch = now;
-  }, { passive: false });
+  // Tylko blokada gesturestart dla starszych Safari
+  document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+  document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
 }
 
 // ── PWA Install Banner ───────────────────────────────────────────────

@@ -27,16 +27,18 @@
   --safe-top:    env(safe-area-inset-top, 0px);
 }
 
-html, body {
+html {
   height: 100%;
-  width: 100%;
-  /* NIE używamy overflow:hidden tu — psuje klawiaturę iOS w modalach */
+  touch-action: manipulation;  /* blokuje double-tap zoom — identycznie jak SolidOffer */
+}
+body {
+  height: 100dvh;              /* dvh = kurczy się gdy pojawi się klawiatura iOS */
+  overflow: hidden;             /* BLOKUJE scroll poza #app — identycznie jak SolidOffer */
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   background: var(--bg);
   color: var(--t);
   overscroll-behavior: none;
   -webkit-font-smoothing: antialiased;
-  touch-action: manipulation; /* iOS: blokuje double-tap zoom */
 }
 
 button { font-family: inherit; cursor: pointer; border: none; background: none; }
@@ -48,14 +50,13 @@ svg { display: block; }
 #app {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;                /* 100% of body (100dvh) */
   max-width: 480px;
   margin: 0 auto;
   position: relative;
-  overflow-x: hidden;         /* blokuje scroll poziomy */
-  overflow-y: hidden;
+  overflow: hidden;            /* identycznie jak SolidOffer */
   background: var(--bg);
-  touch-action: pan-y;        /* blokuje pinch-zoom i poziomy drag */
+  touch-action: pan-y;
 }
 
 /* Desktop: phone frame */
