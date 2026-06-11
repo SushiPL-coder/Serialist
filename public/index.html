@@ -98,6 +98,37 @@
 <!-- ══ App Shell ════════════════════════════════════════════════════════ -->
 <div id="app">
 
+  <!-- ── SW Update bar ─────────────────────────────────────────── -->
+  <div class="update-bar" id="update-bar">
+    <span>🎉 Nowa wersja dostępna!</span>
+    <button class="update-bar-btn" onclick="applyUpdate()">Odśwież</button>
+  </div>
+
+  <!-- ── iOS install banner ────────────────────────────────────── -->
+  <div class="pwa-banner" id="ios-banner">
+    <div class="pwa-banner-icon"><img src="/icons/Serialist_logo.svg" alt="Serialist"></div>
+    <div class="pwa-banner-body">
+      <div class="pwa-banner-title">Zainstaluj Serialist</div>
+      <div class="pwa-banner-sub">Kliknij <strong>Udostępnij</strong> → „Dodaj do ekranu głównego"</div>
+    </div>
+    <button class="pwa-banner-close" onclick="dismissInstallBanner()" aria-label="Zamknij">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
+  <!-- ── Android/Chrome install banner ─────────────────────────── -->
+  <div class="pwa-banner" id="android-banner">
+    <div class="pwa-banner-icon"><img src="/icons/Serialist_logo.svg" alt="Serialist"></div>
+    <div class="pwa-banner-body">
+      <div class="pwa-banner-title">Zainstaluj Serialist</div>
+      <div class="pwa-banner-sub">Dodaj do ekranu głównego — działa offline</div>
+    </div>
+    <button class="pwa-banner-btn" onclick="androidInstall()">Zainstaluj</button>
+    <button class="pwa-banner-close" onclick="dismissInstallBanner()" aria-label="Zamknij">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+
   <!-- Header -->
   <header class="hdr">
     <div class="logo">
@@ -433,6 +464,21 @@
       <label class="fl" for="inp-tmdb-key">TMDB API Read Access Token</label>
       <input class="fi" id="inp-tmdb-key" type="text" placeholder="eyJhbGciOiJSUzI1NiJ9…">
       <p class="hint">Klucz z <strong>themoviedb.org → Ustawienia → API</strong> (Read Access Token, nie api_key). Używany gdy serwer nie ma skonfigurowanego klucza.</p>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Kopia zapasowa danych</label>
+      <p class="hint" style="margin-bottom:10px">⚠️ Usunięcie PWA z ekranu głównego na iOS kasuje wszystkie dane. Regularnie rób eksport!</p>
+      <div style="display:flex;gap:10px">
+        <button class="bsave" type="button" onclick="exportData()" style="flex:1;padding:11px;font-size:13px">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Eksportuj JSON
+        </button>
+        <button class="bsave" type="button" onclick="importData()" style="flex:1;padding:11px;font-size:13px;background:var(--card);color:var(--t);border:1px solid var(--bs)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Importuj JSON
+        </button>
+      </div>
     </div>
 
     <div class="fg">

@@ -1219,7 +1219,7 @@ function renderNotifPanel() {
       </div>
       <div class="nibody">
         <div class="nititle">${item.series.title} ${item.label}</div>
-        <div class="nisub">${plat.name} · ${item.dateStr===todayStr?'dziś':'jutro'} ${item.series.time}</div>
+        <div class="nisub">${plat.name} · ${(()=>{const d=Math.round((new Date(item.dateStr)-new Date(todayStr))/86400000);return d===0?'dziś':d===1?'jutro':`za ${d} dni`;})()}&nbsp;${item.series.time}</div>
       </div>
       <div class="nitime">${when}</div>
     </div>`;
@@ -1539,13 +1539,167 @@ function wireEvents() {
    17. SERVICE WORKER REGISTRATION
    ───────────────────────────────────────────────────────────────────── */
 
+/* ─────────────────────────────────────────────────────────────────────
+   17. SERVICE WORKER + PWA INSTALL
+   ───────────────────────────────────────────────────────────────────── */
+
+let _swReg        = null;
+let _swWaiting    = null;
+let _installPrompt = null;  // Android beforeinstallprompt
+
 async function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   try {
-    await navigator.serviceWorker.register('/sw.js');
+    _swReg = await navigator.serviceWorker.register('/sw.js');
+
+    // Jeśli nowy SW czeka już teraz
+    if (_swReg.waiting) { _swWaiting = _swReg.waiting; showUpdateBar(); }
+
+    // Nowy SW zainstalowany podczas sesji
+    _swReg.addEventListener('updatefound', () => {
+      const nw = _swReg.installing;
+      nw.addEventListener('statechange', () => {
+        if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+          _swWaiting = nw;
+          showUpdateBar();
+        }
+      });
+    });
+
+    // Gdy SW przejmie kontrolę → przeładuj stronę
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      window.location.reload();
+    });
   } catch (e) {
     console.warn('SW registration failed:', e);
   }
+}
+
+function showUpdateBar() {
+  document.getElementById('update-bar')?.classList.add('show');
+}
+
+function applyUpdate() {
+  if (_swWaiting) {
+    _swWaiting.postMessage({ type: 'SKIP_WAITING' });
+  } else {
+    window.location.reload();
+  }
+}
+
+// ── iOS pinch-zoom prevention ────────────────────────────────────────
+function initZoomPrevention() {
+  // Blokuje pinch zoom (iOS ignoruje user-scalable=no)
+  document.addEventListener('touchmove', e => {
+    if (e.touches.length > 1) e.preventDefault();
+  }, { passive: false });
+
+  // Blokuje double-tap zoom
+  let lastTouch = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTouch < 300) e.preventDefault();
+    lastTouch = now;
+  }, { passive: false });
+}
+
+// ── PWA Install Banner ───────────────────────────────────────────────
+function initInstallBanner() {
+  // Jeśli już uruchomione jako PWA — nie pokazuj
+  const standalone = window.navigator.standalone === true ||
+                     matchMedia('(display-mode: standalone)').matches ||
+                     matchMedia('(display-mode: fullscreen)').matches;
+  if (standalone) return;
+  if (localStorage.getItem('serialist_install_dismissed')) return;
+
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+  if (isIOS) {
+    setTimeout(() => {
+      document.getElementById('ios-banner')?.classList.add('show');
+    }, 3000);
+  }
+
+  // Android / Chrome Desktop: native prompt
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    _installPrompt = e;
+    document.getElementById('android-banner')?.classList.add('show');
+  });
+
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('android-banner')?.classList.remove('show');
+    _installPrompt = null;
+    localStorage.setItem('serialist_install_dismissed', '1');
+    showToast('✅ Serialist zainstalowany!');
+  });
+}
+
+function androidInstall() {
+  if (!_installPrompt) return;
+  _installPrompt.prompt();
+  _installPrompt.userChoice.then(r => {
+    if (r.outcome === 'accepted') {
+      document.getElementById('android-banner')?.classList.remove('show');
+      _installPrompt = null;
+    }
+  });
+}
+
+function dismissInstallBanner() {
+  document.getElementById('ios-banner')?.classList.remove('show');
+  document.getElementById('android-banner')?.classList.remove('show');
+  localStorage.setItem('serialist_install_dismissed', '1');
+}
+
+// ── Data Export / Import ─────────────────────────────────────────────
+async function exportData() {
+  const [series, watchlist, episodes] = await Promise.all([
+    DB.getAll('series'), DB.getAll('watchlist'), DB.getAll('episodes'),
+  ]);
+  const blob = new Blob(
+    [JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), series, watchlist, episodes }, null, 2)],
+    { type: 'application/json' }
+  );
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `serialist-backup-${today()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('📦 Eksport gotowy!');
+}
+
+async function importData() {
+  const input = document.createElement('input');
+  input.type = 'file'; input.accept = '.json';
+  input.onchange = async () => {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data.series || !Array.isArray(data.series)) throw new Error('Nieprawidłowy format');
+
+      // Zapisz do IDB
+      await Promise.all([
+        ...data.series.map(s => DB.put('series', s)),
+        ...(data.watchlist || []).map(w => DB.put('watchlist', w)),
+        ...(data.episodes  || []).map(e => DB.put('episodes',  e)),
+      ]);
+
+      // Odśwież stan
+      S.series    = await DB.getAll('series');
+      S.watchlist = await DB.getAll('watchlist');
+      const eps   = await DB.getAll('episodes');
+      eps.forEach(ep => { S.episodes[ep.id] = ep; });
+
+      renderCalendar(); renderSeriesList(); renderWatchlist();
+      showToast(`✅ Zaimportowano ${data.series.length} seriali`);
+    } catch (err) {
+      showToast('❌ Błąd importu: ' + err.message);
+    }
+  };
+  input.click();
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -1575,8 +1729,10 @@ async function init() {
   renderWatchlist();
   renderNotifPanel();
 
-  // Register service worker
+  // Register service worker + PWA features
   registerSW();
+  initZoomPrevention();
+  initInstallBanner();
 }
 
 document.addEventListener('DOMContentLoaded', init);

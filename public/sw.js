@@ -3,7 +3,7 @@
 //  Author: SushiPL-coder | https://github.com/SushiPL-coder/Serialist | MIT License
 // ══════════════════════════════════════════════════════════════════════
 
-const CACHE   = 'serialist-v1';
+const CACHE   = 'serialist-v2';  // ← zmień przy każdym deploymencie
 const ASSETS  = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json',
                  '/icons/icon-192.svg', '/icons/icon-512.svg'];
 
@@ -48,7 +48,11 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// ── Push Notifications ───────────────────────────────────────────────
+// ── Message: force skip waiting when user confirms update ────────────
+self.addEventListener('message', e => {
+  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
 self.addEventListener('push', e => {
   let data = { title: 'Serialist', body: 'Nowy odcinek do obejrzenia!', url: '/' };
   try { data = { ...data, ...e.data.json() }; } catch {}
