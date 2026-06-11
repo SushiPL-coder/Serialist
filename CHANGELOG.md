@@ -5,6 +5,28 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [0.4.0] – 2026-06-11
+
+### Added
+- **Accounts + cloud sync (Cloudflare D1)** – optional login (accounts defined by the instance owner via `AUTH_USERS`). Logged-in users get automatic whole-state sync (last-write-wins, debounced 3 s after every change, plus on app focus / coming back online). Data survives PWA reinstall. Without login the app runs in **demo mode** – fully local, exactly as before.
+- New endpoints: `POST /api/auth/login`, `GET|PUT /api/sync`, `GET /api/config` (serves the VAPID public key – no more manual pasting), `DELETE /api/push-subscribe`.
+- `schema.sql` – D1 schema (state, covers, push_subs, schedule).
+- Covers are synced in a separate D1 table and uploads are downscaled client-side to max 600 px JPEG (D1 row-size limits + lighter IndexedDB).
+- Push notifications now send **real episode alerts**: the app uploads a 14-day episode schedule during sync; the cron sends a push up to 1 h before air time, per device, per user.
+
+### Fixed
+- **iOS keyboard covering inputs** – `visualViewport`-driven `--kb` CSS variable lifts the bottom-sheet modal above the keyboard and scrolls the focused field into view; added `viewport-fit=cover` + `interactive-widget=resizes-content`.
+- **Push notifications never worked** – `push-send.js` used Worker module syntax (`export default { scheduled }`) which Cloudflare **Pages Functions never execute**, and its encryption mixed the legacy `aesgcm` HKDF scheme with the `aes128gcm` wire format (undecryptable), with a PKCS8 key import that fails for standard raw VAPID keys. Rewritten from scratch as a Pages Function (`GET /api/push-send?secret=…`, trigger hourly via external cron such as cron-job.org) with RFC 8291/8292-correct crypto, **verified against the official RFC 8291 test vector**. Expired subscriptions (404/410) are cleaned up automatically.
+- Stale push subscriptions with a previous VAPID key are unsubscribed and re-created automatically.
+
+### Changed
+- Push subscriptions moved from KV to D1 (KV namespace no longer needed) and now require login (the cron needs the user's schedule to know what to send).
+- Removed the manual "VAPID Public Key" field from Settings – fetched from `/api/config`.
+- Settings now contain an **Account** section (login / logout / sync now / last-sync time).
+- `wrangler.toml` rewritten as configuration documentation for the Pages dashboard.
+
+---
+
 ## [0.3.1] – 2026-06-11
 
 ### Fixed

@@ -3,7 +3,7 @@
 //  Author: SushiPL-coder | https://github.com/SushiPL-coder/Serialist | MIT License
 // ══════════════════════════════════════════════════════════════════════
 
-const CACHE   = 'serialist-v2';  // ← zmień przy każdym deploymencie
+const CACHE   = 'serialist-v3';  // ← zmień przy każdym deploymencie
 const ASSETS  = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json',
                  '/icons/icon-192.svg', '/icons/icon-512.svg'];
 

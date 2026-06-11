@@ -125,7 +125,26 @@ const DB = (() => {
     });
   }
 
-  return { getAll, get, put, del, getByIndex };
+  async function clear(store) {
+    const db = await open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).clear();
+      req.onsuccess = () => res();
+      req.onerror  = () => rej(req.error);
+    });
+  }
+
+  return { getAll, get, put, del, clear, getByIndex };
+})();
+
+// Każdy zapis/usunięcie w store'ach danych kolejkuje synchronizację z chmurą
+// (no-op gdy użytkownik nie jest zalogowany — tryb demo).
+const SYNC_STORES = new Set(['series', 'watchlist', 'episodes']);
+(() => {
+  const _put = DB.put, _del = DB.del;
+  DB.put = async (store, obj) => { const r = await _put(store, obj); if (SYNC_STORES.has(store)) Sync.queue(); return r; };
+  DB.del = async (store, key) => { const r = await _del(store, key); if (SYNC_STORES.has(store)) Sync.queue(); return r; };
 })();
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -145,11 +164,191 @@ const S = {
   tmdbId:      null,     // tmdb id selected in modal
   pendingConfirmFn: null,
   settings: {
-    vapidKey:  '',
     tmdbKey:   '',
     pushEnabled: false,
   },
 };
+
+/* ─────────────────────────────────────────────────────────────────────
+   3a. AUTH & CLOUD SYNC (Cloudflare D1)
+   Tryb demo: bez logowania wszystko działa lokalnie (IndexedDB).
+   Po zalogowaniu: stan synchronizowany do D1 (last-write-wins),
+   covery osobno, harmonogram odcinków zasila cron powiadomień push.
+   ───────────────────────────────────────────────────────────────────── */
+
+const Auth = {
+  token: localStorage.getItem('serialist_token') || '',
+  user:  localStorage.getItem('serialist_user')  || '',
+  get loggedIn() { return !!this.token; },
+
+  async login(username, password) {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Błąd logowania (${res.status})`);
+    this.token = data.token;
+    this.user  = data.username;
+    localStorage.setItem('serialist_token', this.token);
+    localStorage.setItem('serialist_user',  this.user);
+  },
+
+  logout() {
+    this.token = '';
+    this.user  = '';
+    localStorage.removeItem('serialist_token');
+    localStorage.removeItem('serialist_user');
+  },
+
+  headers() { return { 'Authorization': `Bearer ${this.token}` }; },
+};
+
+const Sync = {
+  _timer: null,
+  _busy:  false,
+
+  // Wywoływane po każdej zmianie danych — debounce 3 s
+  queue() {
+    localStorage.setItem('serialist_lastChange', String(Date.now()));
+    if (!Auth.loggedIn) return;
+    clearTimeout(this._timer);
+    this._timer = setTimeout(() => this.push(), 3000);
+  },
+
+  async push() {
+    if (!Auth.loggedIn || this._busy || !navigator.onLine) return;
+    this._busy = true;
+    try {
+      const [series, watchlist, episodes] = await Promise.all([
+        DB.getAll('series'), DB.getAll('watchlist'), DB.getAll('episodes'),
+      ]);
+
+      // Covery wysyłamy osobno (limity wierszy D1)
+      const covers = [];
+      const strip = arr => arr.map(item => {
+        if (item.cover) { covers.push({ id: item.id, data: item.cover }); const { cover, ...rest } = item; return rest; }
+        return item;
+      });
+
+      const updatedAt = Number(localStorage.getItem('serialist_lastChange')) || Date.now();
+      const res = await fetch('/api/sync', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...Auth.headers() },
+        body: JSON.stringify({
+          updatedAt,
+          state:    { version: 1, series: strip(series), watchlist: strip(watchlist), episodes },
+          covers,
+          schedule: buildPushSchedule(),
+          tzOffset: new Date().getTimezoneOffset(),
+        }),
+      });
+      if (res.status === 401) { this._authLost(); return; }
+      if (res.ok) {
+        localStorage.setItem('serialist_lastSync', String(Date.now()));
+        updateAccountUI();
+      }
+    } catch (e) {
+      console.warn('Sync push failed:', e);
+    } finally {
+      this._busy = false;
+    }
+  },
+
+  async pull() {
+    if (!Auth.loggedIn) return;
+    const res = await fetch('/api/sync', { headers: Auth.headers() });
+    if (res.status === 401) { this._authLost(); return; }
+    if (!res.ok) throw new Error(`Sync pull ${res.status}`);
+    return res.json();
+  },
+
+  _authLost() {
+    Auth.logout();
+    updateAccountUI();
+    showToast('Sesja wygasła — zaloguj się ponownie');
+  },
+};
+
+// Nadchodzące odcinki (14 dni) dla seriali z włączonym dzwoneczkiem —
+// cron na serwerze wysyła z tego push do godziny przed premierą.
+function buildPushSchedule() {
+  const from = today();
+  const to   = toDateStr(addDays(new Date(), 14));
+  const rows = [];
+  S.series.forEach(series => {
+    if (!series.notify) return;
+    generateEpisodeDates(series, from, to).forEach(dateStr => {
+      rows.push({
+        date:  dateStr,
+        time:  series.time || '20:00',
+        title: series.title,
+        label: getEpisodeLabel(series, dateStr),
+      });
+    });
+  });
+  return rows;
+}
+
+// Zastąpienie lokalnych danych stanem z serwera (pull → urządzenie)
+async function applyServerState(state) {
+  if (!state) return;
+  await Promise.all([DB.clear('series'), DB.clear('watchlist'), DB.clear('episodes')]);
+
+  // Zapis bez kolejkowania sync (surowe wywołania przez wrappery są OK —
+  // i tak po chwili wypchną identyczny stan; blokujemy jednak timer na koniec)
+  for (const s of state.series    || []) await DB.put('series',    s);
+  for (const w of state.watchlist || []) await DB.put('watchlist', w);
+  for (const e of state.episodes  || []) await DB.put('episodes',  e);
+  clearTimeout(Sync._timer);
+
+  S.series    = await DB.getAll('series');
+  S.watchlist = await DB.getAll('watchlist');
+  S.episodes  = {};
+  (await DB.getAll('episodes')).forEach(ep => { S.episodes[ep.id] = ep; });
+
+  renderCalendar(); renderSeriesList(); renderWatchlist(); renderNotifPanel();
+}
+
+// Przy starcie / po zalogowaniu: porównaj znaczniki czasu i wybierz kierunek
+async function startupSync({ justLoggedIn = false } = {}) {
+  if (!Auth.loggedIn || !navigator.onLine) { updateAccountUI(); return; }
+  try {
+    const data = await Sync.pull();
+    if (!data) return;
+    const lastChange = Number(localStorage.getItem('serialist_lastChange')) || 0;
+    const serverAt   = Number(data.updatedAt) || 0;
+
+    if (data.state && serverAt > lastChange) {
+      await applyServerState(data.state);
+      localStorage.setItem('serialist_lastChange', String(serverAt));
+      if (justLoggedIn) showToast('Pobrano dane z chmury');
+    } else if (lastChange > serverAt) {
+      await Sync.push();
+      if (justLoggedIn) showToast('Wysłano lokalne dane do chmury');
+    }
+    localStorage.setItem('serialist_lastSync', String(Date.now()));
+  } catch (e) {
+    console.warn('Startup sync failed:', e);
+  }
+  updateAccountUI();
+}
+
+function updateAccountUI() {
+  const out = document.getElementById('acc-logged-out');
+  const inn = document.getElementById('acc-logged-in');
+  if (!out || !inn) return;
+  out.hidden = Auth.loggedIn;
+  inn.hidden = !Auth.loggedIn;
+  if (Auth.loggedIn) {
+    document.getElementById('acc-username').textContent = Auth.user;
+    const last = Number(localStorage.getItem('serialist_lastSync')) || 0;
+    document.getElementById('acc-sync-info').textContent = last
+      ? `Ostatnia synchronizacja: ${new Date(last).toLocaleString('pl-PL')}`
+      : 'Jeszcze nie synchronizowano';
+  }
+}
 
 /* ─────────────────────────────────────────────────────────────────────
    4. DATE & SCHEDULE HELPERS
@@ -1139,7 +1338,18 @@ async function pickTMDB(el, containerId) {
 
 async function enablePush() {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-    showToast('Twoja przeglądarka nie obsługuje push notifications');
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const standalone = window.navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+    if (isIOS && !standalone) {
+      showToast('Na iOS zainstaluj najpierw aplikację: Udostępnij → Do ekranu początkowego');
+    } else {
+      showToast('Twoja przeglądarka nie obsługuje push notifications');
+    }
+    return;
+  }
+
+  if (!Auth.loggedIn) {
+    showToast('Powiadomienia push wymagają zalogowania (tryb demo: niedostępne)');
     return;
   }
 
@@ -1149,31 +1359,69 @@ async function enablePush() {
     return;
   }
 
-  const vapidKey = S.settings.vapidKey || '';
+  // Klucz publiczny VAPID pobieramy z serwera — nic nie trzeba wklejać ręcznie
+  let vapidKey = '';
+  try {
+    const cfg = await fetch('/api/config').then(r => r.json());
+    vapidKey = cfg.vapidPublicKey || '';
+  } catch {}
   if (!vapidKey) {
-    showToast('Brak VAPID Public Key — skonfiguruj w Ustawieniach');
+    showToast('Serwer nie ma skonfigurowanego VAPID_PUBLIC_KEY');
     return;
   }
 
   try {
-    const reg  = await navigator.serviceWorker.ready;
-    const sub  = await reg.pushManager.subscribe({
+    const reg = await navigator.serviceWorker.ready;
+
+    // Jeśli istnieje subskrypcja z innym kluczem — usuń (typowe po rotacji kluczy)
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      const curKey = existing.options?.applicationServerKey
+        ? btoa(String.fromCharCode(...new Uint8Array(existing.options.applicationServerKey)))
+            .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')
+        : null;
+      if (curKey && curKey !== vapidKey) await existing.unsubscribe();
+    }
+
+    const sub = await reg.pushManager.subscribe({
       userVisibleOnly:      true,
       applicationServerKey: urlBase64ToUint8Array(vapidKey),
     });
-    await fetch('/api/push-subscribe', {
+    const res = await fetch('/api/push-subscribe', {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...Auth.headers() },
       body:    JSON.stringify({ subscription: sub }),
     });
+    if (!res.ok) throw new Error(`Serwer odrzucił subskrypcję (${res.status})`);
+
     S.settings.pushEnabled = true;
     await DB.put('settings', { key: 'pushEnabled', value: true });
     setToggle('toggle-push-global', true);
     document.getElementById('push-status-label').textContent = 'Włączone';
+    Sync.queue();  // wyślij od razu harmonogram odcinków na serwer
     showToast('Push notifications włączone!');
   } catch (e) {
     showToast('Błąd subskrypcji push: ' + e.message);
   }
+}
+
+async function disablePush() {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      if (Auth.loggedIn) {
+        fetch('/api/push-subscribe', {
+          method:  'DELETE',
+          headers: { 'Content-Type': 'application/json', ...Auth.headers() },
+          body:    JSON.stringify({ endpoint: sub.endpoint }),
+        }).catch(() => {});
+      }
+      await sub.unsubscribe();
+    }
+  } catch {}
+  S.settings.pushEnabled = false;
+  await DB.put('settings', { key: 'pushEnabled', value: false });
 }
 
 function urlBase64ToUint8Array(b64) {
@@ -1241,30 +1489,25 @@ function formatWhen(diffMs) {
    ───────────────────────────────────────────────────────────────────── */
 
 async function loadSettings() {
-  const vapid  = await DB.get('settings','vapidKey');
   const tmdb   = await DB.get('settings','tmdbKey');
   const pushEn = await DB.get('settings','pushEnabled');
-  S.settings.vapidKey     = vapid?.value  || '';
   S.settings.tmdbKey      = tmdb?.value   || '';
   S.settings.pushEnabled  = !!pushEn?.value;
 }
 
 async function saveSettings() {
-  const vapid = document.getElementById('inp-vapid-key').value.trim();
   const tmdb  = document.getElementById('inp-tmdb-key').value.trim();
-  S.settings.vapidKey  = vapid;
   S.settings.tmdbKey   = tmdb;
-  await DB.put('settings', { key: 'vapidKey',  value: vapid });
   await DB.put('settings', { key: 'tmdbKey',   value: tmdb  });
   closeOverlay('overlay-settings');
   showToast('Ustawienia zapisane');
 }
 
 function openSettings() {
-  document.getElementById('inp-vapid-key').value = S.settings.vapidKey;
   document.getElementById('inp-tmdb-key').value  = S.settings.tmdbKey;
   setToggle('toggle-push-global', S.settings.pushEnabled);
   document.getElementById('push-status-label').textContent = S.settings.pushEnabled ? 'Włączone' : 'Wyłączone';
+  updateAccountUI();
   openOverlay('overlay-settings');
 }
 
@@ -1317,6 +1560,25 @@ function blobToBase64(blob) {
     r.onload  = () => res(r.result);
     r.onerror = () => rej(r.error);
     r.readAsDataURL(blob);
+  });
+}
+
+// Skalowanie obrazka do maxDim po dłuższym boku → JPEG data URL
+async function downscaleImage(file, maxDim = 600, quality = 0.82) {
+  const srcB64 = await blobToBase64(file);
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+      if (scale === 1 && file.size < 300 * 1024) { resolve(srcB64); return; }
+      const cv = document.createElement('canvas');
+      cv.width  = Math.round(img.width  * scale);
+      cv.height = Math.round(img.height * scale);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      resolve(cv.toDataURL('image/jpeg', quality));
+    };
+    img.onerror = () => resolve(srcB64);
+    img.src = srcB64;
   });
 }
 
@@ -1428,6 +1690,39 @@ function wireEvents() {
   document.getElementById('btn-settings').addEventListener('click', openSettings);
   document.getElementById('btn-save-settings').addEventListener('click', saveSettings);
 
+  // Konto / synchronizacja
+  document.getElementById('btn-login').addEventListener('click', async () => {
+    const u = document.getElementById('inp-login-user').value.trim();
+    const p = document.getElementById('inp-login-pass').value;
+    if (!u || !p) { showToast('Podaj login i hasło'); return; }
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true;
+    try {
+      await Auth.login(u, p);
+      document.getElementById('inp-login-pass').value = '';
+      updateAccountUI();
+      showToast(`Zalogowano jako ${Auth.user}`);
+      await startupSync({ justLoggedIn: true });
+    } catch (e) {
+      showToast(e.message);
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  document.getElementById('inp-login-pass').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('btn-login').click();
+  });
+  document.getElementById('btn-logout').addEventListener('click', () => {
+    Auth.logout();
+    updateAccountUI();
+    showToast('Wylogowano — dane pozostają lokalnie na urządzeniu');
+  });
+  document.getElementById('btn-sync-now').addEventListener('click', async () => {
+    showToast('Synchronizuję…');
+    await Sync.push();
+    showToast('Zsynchronizowano');
+  });
+
   // Close overlays on background click
   ['overlay-series','overlay-wl','overlay-confirm','overlay-settings'].forEach(id => {
     document.getElementById(id).addEventListener('click', e => {
@@ -1475,8 +1770,9 @@ function wireEvents() {
   document.getElementById('inp-cover').addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { showToast('Plik za duży — max 2 MB'); return; }
-    const b64   = await blobToBase64(file);
+    if (file.size > 8 * 1024 * 1024) { showToast('Plik za duży — max 8 MB'); return; }
+    // Zmniejszamy do max 600 px JPEG — lżej w IndexedDB i w synchronizacji D1
+    const b64   = await downscaleImage(file, 600, 0.82);
     S.coverB64  = b64;
     showCoverPreview(b64);
   });
@@ -1510,7 +1806,7 @@ function wireEvents() {
   document.getElementById('btn-enable-push').addEventListener('click', enablePush);
   document.getElementById('toggle-push-global').addEventListener('click', () => {
     if (S.settings.pushEnabled) {
-      S.settings.pushEnabled = false;
+      disablePush();
       setToggle('toggle-push-global', false);
       document.getElementById('push-status-label').textContent = 'Wyłączone';
     } else {
@@ -1585,6 +1881,47 @@ function applyUpdate() {
   } else {
     window.location.reload();
   }
+}
+
+// ── iOS: klawiatura nie może zasłaniać pól w modalach ────────────────
+// iOS NIE zmniejsza layout viewportu po otwarciu klawiatury — kurczy się
+// tylko visualViewport. Mierzymy wysokość klawiatury i przez zmienną CSS
+// --kb przesuwamy bottom-sheet ponad klawiaturę + dosuwamy aktywne pole.
+function initKeyboardHandling() {
+  if (!window.visualViewport) return;
+  const vv = window.visualViewport;
+
+  const update = () => {
+    const kb = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    document.body.classList.toggle('kb-open', kb > 40);
+
+    if (kb > 40) {
+      const el = document.activeElement;
+      if (el && el.closest('.modal') && el.matches('input, textarea, select')) {
+        requestAnimationFrame(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }));
+      }
+    }
+  };
+
+  vv.addEventListener('resize', update);
+  vv.addEventListener('scroll', update);
+
+  // Dodatkowy scroll po fokusie (klawiatura animuje się ~300 ms)
+  document.addEventListener('focusin', e => {
+    if (e.target.matches('input, textarea, select') && e.target.closest('.modal')) {
+      setTimeout(() => e.target.scrollIntoView({ block: 'center', behavior: 'smooth' }), 350);
+    }
+  });
+
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      if (!document.activeElement || !document.activeElement.matches('input, textarea, select')) {
+        document.documentElement.style.setProperty('--kb', '0px');
+        document.body.classList.remove('kb-open');
+      }
+    }, 100);
+  });
 }
 
 // ── iOS pinch-zoom + scroll prevention ──────────────────────────────
@@ -1734,7 +2071,16 @@ async function init() {
   // Register service worker + PWA features
   registerSW();
   initZoomPrevention();
+  initKeyboardHandling();
   initInstallBanner();
+
+  // Cloud sync (tryb demo = no-op)
+  updateAccountUI();
+  startupSync();
+  window.addEventListener('online', () => Sync.push());
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') startupSync();
+  });
 }
 
 document.addEventListener('DOMContentLoaded', init);

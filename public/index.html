@@ -7,7 +7,7 @@
 <html lang="pl">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover,interactive-widget=resizes-content">
   <meta name="theme-color" content="#08091A">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -454,10 +454,37 @@
     <div class="mhandle"></div>
     <h2 class="mtitle">Ustawienia</h2>
 
+    <!-- Konto / synchronizacja -->
     <div class="fg">
-      <label class="fl" for="inp-vapid-key">VAPID Public Key</label>
-      <input class="fi" id="inp-vapid-key" type="text" placeholder="BxxxxxxxxxxxxxxxxxxxxA=">
-      <p class="hint">Klucz z Cloudflare Workers. Zobacz README → Push Notifications.</p>
+      <label class="fl">Konto · synchronizacja w chmurze</label>
+
+      <div id="acc-logged-out">
+        <input class="fi" id="inp-login-user" type="text" placeholder="Login" autocomplete="username" autocapitalize="none" style="margin-bottom:8px">
+        <input class="fi" id="inp-login-pass" type="password" placeholder="Hasło" autocomplete="current-password">
+        <button class="bsave" id="btn-login" type="button" style="margin-top:10px;padding:11px;font-size:13px">
+          <svg width="14" height="14"><use href="#ic-user"/></svg>
+          Zaloguj się
+        </button>
+        <p class="hint" style="margin-top:8px">Bez logowania działasz w <strong>trybie demo</strong> — dane są zapisywane tylko na tym urządzeniu (usunięcie PWA = utrata danych). Konto włącza synchronizację (Cloudflare D1) i powiadomienia push. Konta zakłada właściciel instancji — zobacz README na GitHubie, jak postawić własną.</p>
+      </div>
+
+      <div id="acc-logged-in" hidden>
+        <div class="acc-card">
+          <div class="acc-row">
+            <span class="acc-dot"></span>
+            Zalogowano jako <strong id="acc-username" style="margin-left:4px"></strong>
+          </div>
+          <p class="hint" id="acc-sync-info" style="margin:6px 0 0">—</p>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:10px">
+          <button class="bsave" id="btn-sync-now" type="button" style="flex:1;padding:11px;font-size:13px">
+            Synchronizuj teraz
+          </button>
+          <button class="bsave" id="btn-logout" type="button" style="flex:1;padding:11px;font-size:13px;background:var(--card);color:var(--t);border:1px solid var(--bs)">
+            Wyloguj
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="fg">
@@ -483,6 +510,7 @@
 
     <div class="fg">
       <label class="fl">Powiadomienia Push</label>
+      <p class="hint" style="margin-bottom:10px">Wymagają zalogowania. Klucz VAPID jest pobierany automatycznie z serwera. Na iOS najpierw zainstaluj aplikację na ekranie głównym.</p>
       <div class="trow">
         <div class="toggle" id="toggle-push-global" role="switch" aria-checked="false"></div>
         <span id="push-status-label">Wyłączone</span>
