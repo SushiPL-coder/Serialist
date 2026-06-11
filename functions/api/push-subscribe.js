@@ -7,6 +7,7 @@
 //   DELETE /api/push-subscribe   { endpoint }       → { ok }
 
 export async function onRequestPost({ request, env }) {
+  if (!env.DB) return json({ error: 'D1 binding "DB" is not configured — add it in Pages → Settings → Bindings and redeploy' }, 503);
   const user = await authUser(request, env);
   if (!user) return json({ error: 'unauthorized' }, 401);
 
@@ -28,6 +29,7 @@ export async function onRequestPost({ request, env }) {
 }
 
 export async function onRequestDelete({ request, env }) {
+  if (!env.DB) return json({ error: 'D1 binding "DB" is not configured — add it in Pages → Settings → Bindings and redeploy' }, 503);
   const user = await authUser(request, env);
   if (!user) return json({ error: 'unauthorized' }, 401);
 

@@ -9,6 +9,7 @@
 // row-size limits. `schedule` feeds the push-notification cron.
 
 export async function onRequestGet({ request, env }) {
+  if (!env.DB) return json({ error: 'D1 binding "DB" is not configured — add it in Pages → Settings → Bindings and redeploy' }, 503);
   const user = await authUser(request, env);
   if (!user) return json({ error: 'unauthorized' }, 401);
 
@@ -33,6 +34,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPut({ request, env }) {
+  if (!env.DB) return json({ error: 'D1 binding "DB" is not configured — add it in Pages → Settings → Bindings and redeploy' }, 503);
   const user = await authUser(request, env);
   if (!user) return json({ error: 'unauthorized' }, 401);
 

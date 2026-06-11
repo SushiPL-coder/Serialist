@@ -23,6 +23,7 @@ export async function onRequestGet({ request, env }) {
   if (!env.CRON_SECRET || url.searchParams.get('secret') !== env.CRON_SECRET) {
     return new Response('Unauthorized', { status: 401 });
   }
+  if (!env.DB) return json({ error: 'D1 binding "DB" is not configured' }, 503);
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
     return json({ error: 'VAPID keys not configured' }, 500);
   }
