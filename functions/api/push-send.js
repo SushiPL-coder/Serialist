@@ -27,6 +27,14 @@ export async function onRequestGet({ request, env }) {
   if (!env.VAPID_PUBLIC_KEY || !env.VAPID_PRIVATE_KEY) {
     return json({ error: 'VAPID keys not configured' }, 500);
   }
+  // Twardy test pary kluczy na wartościach z TEGO deploymentu — zanim cokolwiek wyślemy
+  if (!(await vapidPairOk(env))) {
+    return json({
+      ok: false,
+      error: 'VAPID_PUBLIC_KEY i VAPID_PRIVATE_KEY na tym deploymencie NIE SĄ parą. ' +
+             'Sprawdź: (1) środowisko Production, nie Preview, (2) zapis obu wartości, (3) redeploy PO zapisie.',
+    }, 500);
+  }
 
   if (url.searchParams.has('reset')) {
     await env.DB.prepare('UPDATE schedule SET notified = 0').run();
@@ -155,6 +163,22 @@ async function buildVapidJwt(env, endpoint) {
     new TextEncoder().encode(unsigned));
 
   return `${unsigned}.${b64uFromBytes(new Uint8Array(sig))}`;
+}
+
+// Podpis testowy prywatnym + weryfikacja publicznym = dowód pary
+async function vapidPairOk(env) {
+  try {
+    const pubB = b64uToBytes((env.VAPID_PUBLIC_KEY || '').trim());
+    if (pubB.length !== 65 || pubB[0] !== 4) return false;
+    const jwk = { kty: 'EC', crv: 'P-256',
+      x: b64uFromBytes(pubB.slice(1, 33)), y: b64uFromBytes(pubB.slice(33, 65)),
+      d: (env.VAPID_PRIVATE_KEY || '').trim() };
+    const priv = await crypto.subtle.importKey('jwk', jwk, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    const pub  = await crypto.subtle.importKey('raw', pubB, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['verify']);
+    const data = new TextEncoder().encode('selftest');
+    const sig  = await crypto.subtle.sign({ name: 'ECDSA', hash: 'SHA-256' }, priv, data);
+    return await crypto.subtle.verify({ name: 'ECDSA', hash: 'SHA-256' }, pub, sig, data);
+  } catch { return false; }
 }
 
 // VAPID sub musi mieć schemat mailto: lub https: — Apple odrzuca goły e-mail
