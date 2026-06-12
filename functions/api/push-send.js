@@ -94,13 +94,14 @@ async function sendDueNotifications(env, testMode) {
 
 async function sendPush(env, subscription, payloadObj) {
   const { endpoint, keys } = subscription;
+  const pubKey = (env.VAPID_PUBLIC_KEY || '').trim();
   const jwt  = await buildVapidJwt(env, endpoint);
   const body = await encryptAes128Gcm(JSON.stringify(payloadObj), keys.p256dh, keys.auth);
 
   const res = await fetch(endpoint, {
     method: 'POST',
     headers: {
-      'Authorization':    `vapid t=${jwt},k=${env.VAPID_PUBLIC_KEY}`,
+      'Authorization':    `vapid t=${jwt},k=${pubKey}`,
       'Content-Encoding': 'aes128gcm',
       'Content-Type':     'application/octet-stream',
       'TTL':              '86400',
@@ -125,7 +126,7 @@ async function buildVapidJwt(env, endpoint) {
   }));
   const unsigned = `${header}.${claims}`;
 
-  const pub = b64uToBytes(env.VAPID_PUBLIC_KEY);          // 65 bytes: 0x04 || x || y
+  const pub = b64uToBytes((env.VAPID_PUBLIC_KEY || '').trim());          // 65 bytes: 0x04 || x || y
   if (pub.length !== 65 || pub[0] !== 4) throw new Error('VAPID_PUBLIC_KEY: invalid format');
   const jwk = {
     kty: 'EC', crv: 'P-256',

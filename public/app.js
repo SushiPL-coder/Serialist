@@ -1363,7 +1363,7 @@ async function enablePush() {
   let vapidKey = '';
   try {
     const cfg = await fetch('/api/config').then(r => r.json());
-    vapidKey = cfg.vapidPublicKey || '';
+    vapidKey = (cfg.vapidPublicKey || '').trim();
   } catch {}
   if (!vapidKey) {
     showToast('Serwer nie ma skonfigurowanego VAPID_PUBLIC_KEY');

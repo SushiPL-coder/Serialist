@@ -5,7 +5,7 @@
 
 export async function onRequestGet({ env }) {
   return new Response(JSON.stringify({
-    vapidPublicKey: env.VAPID_PUBLIC_KEY || null,
+    vapidPublicKey: (env.VAPID_PUBLIC_KEY || '').trim() || null,
     authEnabled:    !!(env.AUTH_USERS && env.AUTH_SECRET),
     diag: {
       d1_binding_DB:     !!env.DB,
