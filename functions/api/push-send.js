@@ -28,13 +28,16 @@ export async function onRequestGet({ request, env }) {
     return json({ error: 'VAPID keys not configured' }, 500);
   }
 
+  if (url.searchParams.has('reset')) {
+    await env.DB.prepare('UPDATE schedule SET notified = 0').run();
+  }
   const result = await sendDueNotifications(env, url.searchParams.has('test'));
   return json({ ok: true, ...result });
 }
 
 async function sendDueNotifications(env, testMode) {
   const now = Date.now();
-  const log = { checked: 0, sent: 0, removedSubs: 0, errors: [] };
+  const log = { checked: 0, sent: 0, removedSubs: 0, errors: [], results: [] };
 
   // Candidate rows: today and yesterday (covers timezone edges), not yet notified
   const d  = t => new Date(t).toISOString().slice(0, 10);
@@ -49,9 +52,13 @@ async function sendDueNotifications(env, testMode) {
     const airUtc = new Date(`${r.date}T${r.time || '20:00'}:00Z`).getTime()
                  + (r.tz_offset || 0) * 60000;
 
+    const entry = { title: r.title, date: r.date, time: r.time, minutesToAir: Math.round((airUtc - now) / 60000), pushes: [] };
+    log.results.push(entry);
+
     if (!testMode) {
-      if (airUtc > now + 60 * 60000) continue;            // more than 1h away — wait
+      if (airUtc > now + 60 * 60000) { entry.skipped = 'jeszcze nie pora (>60 min do emisji)'; continue; }
       if (airUtc < now - 6 * 3600000) {                   // stale (>6h ago) — skip silently
+        entry.skipped = 'przeterminowane (>6h po emisji)';
         await env.DB.prepare('UPDATE schedule SET notified = 1 WHERE rowid = ?').bind(r.rowid).run();
         continue;
       }
@@ -68,9 +75,12 @@ async function sendDueNotifications(env, testMode) {
       tag:   `serialist-${r.date}-${r.title}`.slice(0, 64),
     };
 
+    entry.devices = (subs.results || []).length;
+    if (!entry.devices) entry.skipped = 'brak subskrypcji push dla tego użytkownika';
     for (const s of subs.results || []) {
       try {
-        const status = await sendPush(env, JSON.parse(s.subscription), payload);
+        const { status, detail } = await sendPush(env, JSON.parse(s.subscription), payload);
+        entry.pushes.push(detail ? `${status}: ${detail}` : status);
         if (status === 404 || status === 410) {
           await env.DB.prepare('DELETE FROM push_subs WHERE key = ?').bind(s.key).run();
           log.removedSubs++;
@@ -80,6 +90,7 @@ async function sendDueNotifications(env, testMode) {
           log.errors.push(`push ${status} for ${r.title}`);
         }
       } catch (e) {
+        entry.pushes.push('EXC: ' + e.message);
         log.errors.push(e.message);
       }
     }
@@ -109,7 +120,11 @@ async function sendPush(env, subscription, payloadObj) {
     },
     body,
   });
-  return res.status;
+  let detail = '';
+  if (res.status < 200 || res.status >= 300) {
+    detail = (await res.text().catch(() => '')).slice(0, 200);
+  }
+  return { status: res.status, detail };
 }
 
 // VAPID JWT (ES256). Private key = raw 32-byte scalar (base64url),
@@ -122,7 +137,7 @@ async function buildVapidJwt(env, endpoint) {
   const claims = b64uFromStr(JSON.stringify({
     aud,
     exp: Math.floor(Date.now() / 1000) + 12 * 3600,
-    sub: env.VAPID_SUBJECT || 'mailto:admin@example.com',
+    sub: normalizeSubject(env.VAPID_SUBJECT),
   }));
   const unsigned = `${header}.${claims}`;
 
@@ -140,6 +155,14 @@ async function buildVapidJwt(env, endpoint) {
     new TextEncoder().encode(unsigned));
 
   return `${unsigned}.${b64uFromBytes(new Uint8Array(sig))}`;
+}
+
+// VAPID sub musi mieć schemat mailto: lub https: — Apple odrzuca goły e-mail
+function normalizeSubject(subj) {
+  const v = (subj || '').trim();
+  if (!v) return 'mailto:admin@example.com';
+  if (v.startsWith('mailto:') || v.startsWith('https:')) return v;
+  return 'mailto:' + v;
 }
 
 // RFC 8291 content encryption
