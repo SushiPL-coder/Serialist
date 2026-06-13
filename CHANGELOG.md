@@ -5,6 +5,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [0.5.0] – 2026-06-13
+
+### Added
+- **Filmy w watchliście** – nowy typ wpisu „Film" (przełącznik Serial/Film w modalu „Dodaj do listy"): opcjonalna data premiery, checkbox „Już obejrzany" (karta szarzeje + zielona odznaka „✓ Obejrzane", kliknięcie ikony na kafelku przełącza status) i toggle „Powiadom o premierze" – jednorazowy push w dniu premiery (do 14 dni), bez powtarzania jak przy odcinkach seriali.
+- **Klucz TMDB w synchronizacji** – po zalogowaniu klucz wpisany w Ustawieniach jedzie do D1 razem z resztą stanu (bez zmian w schemacie – w polu `state.settings`); na innym zalogowanym urządzeniu z pustym polem klucz uzupełni się automatycznie po synchronizacji.
+
+### Fixed
+- **Pole okładki zawsze widoczne / stara okładka nie czyściła się** – `.cover-preview { display: inline-flex }` miało wyższy priorytet niż atrybut `[hidden]` (ten sam poziom specyficzności, ale UA-stylesheet `[hidden]` przegrywa z każdą regułą autorską) – podgląd okładki był renderowany cały czas, a po dodaniu drugiego serialu zostawał `src` poprzedniego obrazka. Dodano `.cover-preview[hidden] { display: none }` i czyszczenie `src` w `hideCoverPreview()`.
+- **Losowe przeładowania PWA przy przełączaniu kart** – globalny listener `controllerchange` przeładowywał całą aplikację przy KAŻDEJ aktywacji nowego Service Workera (np. przy powrocie do karty po deployu), bez ostrzeżenia. Reload następuje teraz tylko po kliknięciu „Odśwież” w banerze aktualizacji.
+- **Dodany serial nie pojawiał się w kalendarzu bez restartu aplikacji** – `switchTab()` teraz re-renderuje docelową zakładkę (kalendarz/seriale/watchlista) z aktualnego stanu przy każdym przejściu, jako siatka bezpieczeństwa niezależna od ścieżki zapisu.
+
+### Changed
+- Service worker cache bumped to `serialist-v6`.
+
+---
+
 ## [0.4.1] – 2026-06-11
 
 ### Fixed

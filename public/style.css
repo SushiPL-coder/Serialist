@@ -617,6 +617,20 @@ textarea.fi { resize: none; }
 .tmr-name { font-size: 10px; font-weight: 600; color: var(--tm); margin-top: 4px; text-align: center; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tmr.sel .tmr-name { color: var(--a); }
 
+/* Checkbox "Już obejrzany" */
+.ckbox { display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--t); cursor: pointer; }
+.ckbox input { width: 19px; height: 19px; accent-color: var(--a); cursor: pointer; }
+
+/* Watchlist: odznaki Film / Obejrzane */
+.wl-badge {
+  position: absolute; top: 8px; left: 8px; z-index: 2;
+  font-size: 10px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 6px; backdrop-filter: blur(6px);
+  background: rgba(124,107,254,.85); color: #fff;
+}
+.wlcard.watched .wlthumb-bg { filter: grayscale(.6) brightness(.6); }
+.wlcard.watched .wl-watched-badge { background: rgba(34,197,94,.9); }
+
 /* Cover upload */
 .upzone {
   border: 1px dashed var(--bs); border-radius: 13px; padding: 14px;
@@ -628,6 +642,7 @@ textarea.fi { resize: none; }
 .uptxt { font-size: 13px; color: var(--tm); }
 .uptxt strong { display: block; font-weight: 600; color: var(--t); font-size: 14px; margin-bottom: 2px; }
 .cover-preview { position: relative; margin-top: 8px; display: inline-flex; }
+.cover-preview[hidden] { display: none; }
 .cover-preview img { width: 60px; height: 84px; object-fit: cover; border-radius: 9px; display: block; }
 .cover-remove {
   position: absolute; top: -6px; right: -6px;

@@ -28,6 +28,10 @@
   <symbol id="ic-tv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/>
   </symbol>
+  <symbol id="ic-film" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="2" y="3" width="20" height="18" rx="2"/><line x1="7" y1="3" x2="7" y2="21"/><line x1="17" y1="3" x2="17" y2="21"/>
+    <line x1="2" y1="8" x2="7" y2="8"/><line x1="2" y1="16" x2="7" y2="16"/><line x1="17" y1="8" x2="22" y2="8"/><line x1="17" y1="16" x2="22" y2="16"/>
+  </symbol>
   <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>
   </symbol>
@@ -404,6 +408,18 @@
     <h2 class="mtitle">Dodaj do listy</h2>
 
     <div class="fg">
+      <label class="fl">Typ</label>
+      <div class="pplats" id="wl-type">
+        <button class="ppill sel" type="button" data-type="series">
+          <svg width="14" height="14"><use href="#ic-tv"/></svg> Serial
+        </button>
+        <button class="ppill" type="button" data-type="movie">
+          <svg width="14" height="14"><use href="#ic-film"/></svg> Film
+        </button>
+      </div>
+    </div>
+
+    <div class="fg">
       <label class="fl" for="wl-title">Tytuł</label>
       <div class="tmdb-row">
         <input class="fi" id="wl-title" type="text" placeholder="np. Silo, Dune: Prophecy…" autocomplete="off">
@@ -420,13 +436,25 @@
     </div>
 
     <div class="row2">
-      <div class="fg">
+      <div class="fg" id="wl-season-group">
         <label class="fl" for="wl-season">Sezon</label>
         <input class="fi" id="wl-season" type="number" value="1" min="1">
       </div>
       <div class="fg">
-        <label class="fl" for="wl-release">Premiera</label>
+        <label class="fl" for="wl-release" id="wl-release-label">Premiera</label>
         <input class="fi" id="wl-release" type="date">
+      </div>
+    </div>
+
+    <div class="fg" id="wl-movie-options" hidden>
+      <label class="fl">Film</label>
+      <label class="ckbox">
+        <input type="checkbox" id="wl-watched">
+        <span>Już obejrzany</span>
+      </label>
+      <div class="trow" style="margin-top:10px">
+        <div class="toggle" id="toggle-wl-notify" role="switch" aria-checked="true"></div>
+        <span>Powiadom o premierze (push)</span>
       </div>
     </div>
 

@@ -238,7 +238,7 @@ const Sync = {
         headers: { 'Content-Type': 'application/json', ...Auth.headers() },
         body: JSON.stringify({
           updatedAt,
-          state:    { version: 1, series: strip(series), watchlist: strip(watchlist), episodes },
+          state:    { version: 1, series: strip(series), watchlist: strip(watchlist), episodes, settings: { tmdbKey: S.settings.tmdbKey || '' } },
           covers,
           schedule: buildPushSchedule(),
           tzOffset: new Date().getTimezoneOffset(),
@@ -288,6 +288,17 @@ function buildPushSchedule() {
       });
     });
   });
+  // Premiery filmów z watchlisty (jednorazowe, bez powtarzania)
+  S.watchlist.forEach(item => {
+    if (item.type !== 'movie' || item.watched || item.notify === false) return;
+    if (!item.releaseDate || item.releaseDate < from || item.releaseDate > to) return;
+    rows.push({
+      date:  item.releaseDate,
+      time:  '12:00',
+      title: item.title,
+      label: 'Premiera filmu',
+    });
+  });
   return rows;
 }
 
@@ -295,6 +306,13 @@ function buildPushSchedule() {
 async function applyServerState(state) {
   if (!state) return;
   await Promise.all([DB.clear('series'), DB.clear('watchlist'), DB.clear('episodes')]);
+
+  // Klucz TMDB — jeśli serwer ma jakiś zapisany i lokalnie jest pusty, przejmij go
+  // (nie nadpisujemy lokalnego, gdyby user miał inny ustawiony świadomie)
+  if (state.settings?.tmdbKey && !S.settings.tmdbKey) {
+    S.settings.tmdbKey = state.settings.tmdbKey;
+    await DB.put('settings', { key: 'tmdbKey', value: state.settings.tmdbKey });
+  }
 
   // Zapis bez kolejkowania sync (surowe wywołania przez wrappery są OK —
   // i tak po chwili wypchną identyczny stan; blokujemy jednak timer na koniec)
@@ -998,17 +1016,26 @@ function renderWatchlist() {
   const cards = S.watchlist.map(item => {
     const plat   = getPlatform(item.platform);
     const cover  = item.cover ? `background-image:url(${item.cover})` : `background:${PLATFORM_GRADIENTS[item.platform]||PLATFORM_GRADIENTS.other}`;
-    const releaseTag = releaseTagHTML(item.releaseDate, today);
+    const isMovie = item.type === 'movie';
+    const releaseTag = isMovie && item.watched ? '' : releaseTagHTML(item.releaseDate, today);
+    const badge  = isMovie
+      ? `<span class="wl-badge${item.watched ? ' wl-watched-badge' : ''}">${item.watched ? '✓ Obejrzane' : 'Film'}</span>`
+      : '';
+    const subBits = [plat.name];
+    if (!isMovie && item.season) subBits.push(`S${String(item.season).padStart(2,'0')}`);
 
-    return `<div class="wlcard" onclick="openWlDetail('${item.id}')">
+    return `<div class="wlcard${item.watched ? ' watched' : ''}" onclick="openWlDetail('${item.id}')">
       <div class="wlthumb">
         <div class="wlthumb-bg" style="${cover};background-size:cover;background-position:center"></div>
-        <div class="wlplay"><svg><use href="#ic-play"/></svg></div>
+        ${badge}
+        ${isMovie
+          ? `<div class="wlplay" onclick="event.stopPropagation();toggleWatched('${item.id}')" title="${item.watched ? 'Oznacz jako nieobejrzane' : 'Oznacz jako obejrzane'}"><svg><use href="#ic-${item.watched ? 'x' : 'check'}"/></svg></div>`
+          : `<div class="wlplay"><svg><use href="#ic-play"/></svg></div>`}
         ${releaseTag}
       </div>
       <div class="wlinfo">
         <div class="wltitle">${item.title}</div>
-        <div class="wlsub">${plat.name}${item.season ? ` · S${String(item.season).padStart(2,'0')}` : ''}</div>
+        <div class="wlsub">${subBits.join(' · ')}</div>
       </div>
     </div>`;
   }).join('');
@@ -1030,6 +1057,15 @@ function releaseTagHTML(releaseDate, today) {
   if (diffDays <= 90) return `<span class="rtag soon">${formatDatePL(releaseDate)}</span>`;
   const y = d.getFullYear();
   return `<span class="rtag later">${y}</span>`;
+}
+
+// Oznacza film jako obejrzany / nieobejrzany prosto z kafelka watchlisty
+async function toggleWatched(id) {
+  const item = S.watchlist.find(w => w.id === id);
+  if (!item) return;
+  item.watched = !item.watched;
+  await DB.put('watchlist', item);
+  renderWatchlist();
 }
 
 function openWlDetail(id) {
@@ -1190,7 +1226,10 @@ function openWlModal(id = null) {
   document.getElementById('wl-season').value  = '1';
   document.getElementById('wl-release').value = '';
   document.getElementById('wl-notes').value   = '';
+  document.getElementById('wl-watched').checked = false;
+  setToggle('toggle-wl-notify', true);
   document.getElementById('wl-tmdb-results').hidden = true;
+  setWlType('series');
 
   if (id) {
     const item = S.watchlist.find(w => w.id === id);
@@ -1199,7 +1238,10 @@ function openWlModal(id = null) {
       document.getElementById('wl-season').value  = item.season || 1;
       document.getElementById('wl-release').value = item.releaseDate || '';
       document.getElementById('wl-notes').value   = item.notes || '';
+      document.getElementById('wl-watched').checked = !!item.watched;
+      setToggle('toggle-wl-notify', item.notify !== false);
       buildPlatformPills('wl-pplats', item.platform);
+      setWlType(item.type === 'movie' ? 'movie' : 'series');
       document.getElementById('btn-save-wl').dataset.editId = id;
     }
   } else {
@@ -1208,18 +1250,30 @@ function openWlModal(id = null) {
   openOverlay('overlay-wl');
 }
 
+// Przełącza modal "Dodaj do listy" między trybem Serial i Film
+function setWlType(type) {
+  document.querySelectorAll('#wl-type .ppill').forEach(b => b.classList.toggle('sel', b.dataset.type === type));
+  document.getElementById('wl-season-group').hidden    = type === 'movie';
+  document.getElementById('wl-movie-options').hidden   = type !== 'movie';
+  document.getElementById('wl-release-label').textContent = type === 'movie' ? 'Premiera (opcjonalnie)' : 'Premiera';
+}
+
 async function saveWlModal() {
   const title = document.getElementById('wl-title').value.trim();
   if (!title) { showToast('Wpisz tytuł'); return; }
   const editId   = document.getElementById('btn-save-wl').dataset.editId || null;
   const platform = document.querySelector('#wl-pplats .ppill.sel')?.dataset.key || 'other';
+  const type     = document.querySelector('#wl-type .ppill.sel')?.dataset.type || 'series';
 
   const item = {
     id:          editId || uid(),
     title,
+    type,
     platform,
-    season:      parseInt(document.getElementById('wl-season').value) || null,
+    season:      type === 'movie' ? null : (parseInt(document.getElementById('wl-season').value) || null),
     releaseDate: document.getElementById('wl-release').value || null,
+    watched:     type === 'movie' ? document.getElementById('wl-watched').checked : false,
+    notify:      type === 'movie' ? (document.getElementById('toggle-wl-notify').getAttribute('aria-checked') === 'true') : false,
     notes:       document.getElementById('wl-notes').value.trim(),
     cover:       null,
     tmdbId:      null,
@@ -1497,8 +1551,10 @@ async function loadSettings() {
 
 async function saveSettings() {
   const tmdb  = document.getElementById('inp-tmdb-key').value.trim();
+  const changed = tmdb !== S.settings.tmdbKey;
   S.settings.tmdbKey   = tmdb;
   await DB.put('settings', { key: 'tmdbKey',   value: tmdb  });
+  if (changed) Sync.queue();  // klucz TMDB jedzie do D1 razem z resztą stanu
   closeOverlay('overlay-settings');
   showToast('Ustawienia zapisane');
 }
@@ -1520,6 +1576,11 @@ function switchTab(tab) {
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === `tab-${tab}`));
   document.querySelectorAll('.ni').forEach(btn => btn.classList.toggle('active', btn.dataset.tab === tab));
   document.getElementById('fab').style.display = tab === 'watchlist' ? 'none' : 'flex';
+
+  // Siatka bezpieczeństwa: zakładka zawsze odświeża się danymi z S.* przy wejściu
+  if (tab === 'calendar')  renderCalendar();
+  if (tab === 'series')    renderSeriesList();
+  if (tab === 'watchlist') renderWatchlist();
 }
 
 function openOverlay(id) {
@@ -1647,6 +1708,7 @@ function showCoverPreview(src) {
 
 function hideCoverPreview() {
   document.getElementById('cover-preview').hidden = true;
+  document.getElementById('cover-preview-img').src = '';
   document.getElementById('upzone').style.display = '';
   S.coverB64 = null;
 }
@@ -1742,6 +1804,15 @@ function wireEvents() {
   document.getElementById('toggle-notify').addEventListener('click', function() {
     const cur = this.getAttribute('aria-checked') === 'true';
     setToggle('toggle-notify', !cur);
+  });
+  document.getElementById('toggle-wl-notify').addEventListener('click', function() {
+    const cur = this.getAttribute('aria-checked') === 'true';
+    setToggle('toggle-wl-notify', !cur);
+  });
+
+  // Watchlist: typ Serial / Film
+  document.querySelectorAll('#wl-type .ppill').forEach(btn => {
+    btn.addEventListener('click', () => setWlType(btn.dataset.type));
   });
 
   // Save watchlist
@@ -1840,6 +1911,7 @@ function wireEvents() {
 
 let _swReg        = null;
 let _swWaiting    = null;
+let _userRequestedUpdate = false;  // true tylko po kliknięciu "Odśwież" w banerze
 let _installPrompt = null;  // Android beforeinstallprompt
 
 async function registerSW() {
@@ -1861,9 +1933,12 @@ async function registerSW() {
       });
     });
 
-    // Gdy SW przejmie kontrolę → przeładuj stronę
+    // ⚠️ Reload tylko jeśli to USER kliknął "Odśwież" (applyUpdate ustawia _userRequestedUpdate).
+    // Wcześniej listener był globalny — każda aktywacja nowego SW (np. przy
+    // powrocie do karty po deployu) przeładowywała aplikację bez ostrzeżenia,
+    // co wyglądało jak losowe resety przy przełączaniu kart.
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      window.location.reload();
+      if (_userRequestedUpdate) window.location.reload();
     });
   } catch (e) {
     console.warn('SW registration failed:', e);
@@ -1875,6 +1950,7 @@ function showUpdateBar() {
 }
 
 function applyUpdate() {
+  _userRequestedUpdate = true;
   if (_swWaiting) {
     _swWaiting.postMessage({ type: 'SKIP_WAITING' });
   } else {
