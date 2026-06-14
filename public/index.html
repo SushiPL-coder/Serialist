@@ -387,7 +387,7 @@
       <label class="fl">Powiadomienia push</label>
       <div class="trow">
         <div class="toggle" id="toggle-notify" role="switch" aria-checked="true"></div>
-        <span id="notify-label">30 min przed emisją</span>
+        <span id="notify-label">Do godziny przed emisją</span>
       </div>
     </div>
 
@@ -433,6 +433,24 @@
     <div class="fg">
       <label class="fl">Platforma</label>
       <div class="pplats" id="wl-pplats"></div>
+    </div>
+
+    <div class="fg">
+      <label class="fl">Okładka</label>
+      <div class="upzone" id="wl-upzone">
+        <div class="upico"><svg width="17" height="17"><use href="#ic-upload"/></svg></div>
+        <div class="uptxt">
+          <strong>Wgraj własną okładkę</strong>
+          JPG / PNG · max 8 MB — lub pobierz z TMDB powyżej
+        </div>
+        <input type="file" id="wl-inp-cover" accept="image/jpeg,image/png,image/webp" style="display:none">
+      </div>
+      <div class="cover-preview" id="wl-cover-preview" hidden>
+        <img id="wl-cover-preview-img" alt="Podgląd okładki">
+        <button class="cover-remove" id="wl-btn-cover-remove" type="button">
+          <svg width="14" height="14"><use href="#ic-x"/></svg>
+        </button>
+      </div>
     </div>
 
     <div class="row2">

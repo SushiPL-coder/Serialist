@@ -160,7 +160,8 @@ const S = {
   selectedDay: null,     // Date object
   detailId:    null,     // series id open in detail view
   editId:      null,     // series id being edited (null = new)
-  coverB64:    null,     // base64 cover for current modal
+  coverB64:    null,     // base64 cover for current modal (series)
+  wlCoverB64:  null,     // base64 cover for current modal (watchlist)
   tmdbId:      null,     // tmdb id selected in modal
   pendingConfirmFn: null,
   settings: {
@@ -1029,7 +1030,7 @@ function renderWatchlist() {
         <div class="wlthumb-bg" style="${cover};background-size:cover;background-position:center"></div>
         ${badge}
         ${isMovie
-          ? `<div class="wlplay" onclick="event.stopPropagation();toggleWatched('${item.id}')" title="${item.watched ? 'Oznacz jako nieobejrzane' : 'Oznacz jako obejrzane'}"><svg><use href="#ic-${item.watched ? 'x' : 'check'}"/></svg></div>`
+          ? `<div class="wlplay" onclick="event.stopPropagation();toggleWlWatched('${item.id}')" title="${item.watched ? 'Oznacz jako nieobejrzane' : 'Oznacz jako obejrzane'}"><svg><use href="#ic-${item.watched ? 'x' : 'check'}"/></svg></div>`
           : `<div class="wlplay"><svg><use href="#ic-play"/></svg></div>`}
         ${releaseTag}
       </div>
@@ -1059,8 +1060,8 @@ function releaseTagHTML(releaseDate, today) {
   return `<span class="rtag later">${y}</span>`;
 }
 
-// Oznacza film jako obejrzany / nieobejrzany prosto z kafelka watchlisty
-async function toggleWatched(id) {
+// Oznacza film z watchlisty jako obejrzany / nieobejrzany (kafelek watchlisty)
+async function toggleWlWatched(id) {
   const item = S.watchlist.find(w => w.id === id);
   if (!item) return;
   item.watched = !item.watched;
@@ -1229,6 +1230,8 @@ function openWlModal(id = null) {
   document.getElementById('wl-watched').checked = false;
   setToggle('toggle-wl-notify', true);
   document.getElementById('wl-tmdb-results').hidden = true;
+  S.wlCoverB64 = null;
+  hideCoverPreview('wl-');
   setWlType('series');
 
   if (id) {
@@ -1242,6 +1245,7 @@ function openWlModal(id = null) {
       setToggle('toggle-wl-notify', item.notify !== false);
       buildPlatformPills('wl-pplats', item.platform);
       setWlType(item.type === 'movie' ? 'movie' : 'series');
+      if (item.cover) { S.wlCoverB64 = item.cover; showCoverPreview(item.cover, 'wl-'); }
       document.getElementById('btn-save-wl').dataset.editId = id;
     }
   } else {
@@ -1275,7 +1279,7 @@ async function saveWlModal() {
     watched:     type === 'movie' ? document.getElementById('wl-watched').checked : false,
     notify:      type === 'movie' ? (document.getElementById('toggle-wl-notify').getAttribute('aria-checked') === 'true') : false,
     notes:       document.getElementById('wl-notes').value.trim(),
-    cover:       null,
+    cover:       S.wlCoverB64,
     tmdbId:      null,
     createdAt:   editId ? (S.watchlist.find(w=>w.id===editId)?.createdAt || new Date().toISOString()) : new Date().toISOString(),
   };
@@ -1371,6 +1375,7 @@ async function pickTMDB(el, containerId) {
   if (inp) inp.value = title;
 
   S.tmdbId = tmdbId;
+  const isWl = containerId.startsWith('wl-');
 
   if (poster) {
     // Fetch poster as base64 to store locally
@@ -1378,8 +1383,8 @@ async function pickTMDB(el, containerId) {
       const imgRes  = await fetch(`https://image.tmdb.org/t/p/w300${poster}`);
       const blob    = await imgRes.blob();
       const b64     = await blobToBase64(blob);
-      S.coverB64    = b64;
-      showCoverPreview(b64);
+      if (isWl) { S.wlCoverB64 = b64; showCoverPreview(b64, 'wl-'); }
+      else      { S.coverB64   = b64; showCoverPreview(b64); }
     } catch {
       // Poster load failed, skip
     }
@@ -1511,7 +1516,8 @@ function renderNotifPanel() {
     return;
   }
 
-  pip.hidden = false;
+  // Czerwona kropka = coś nadchodzi w ciągu najbliższych 24h (nie cały tydzień)
+  pip.hidden = !items.some(item => item.diffMs >= 0 && item.diffMs <= 24 * 3600000);
   list.innerHTML = items.slice(0, 5).map(item => {
     const plat  = getPlatform(item.series.platform);
     const when  = formatWhen(item.diffMs);
@@ -1700,17 +1706,17 @@ function addManualDateRow(val = '') {
   document.getElementById('manual-dates-list').appendChild(div);
 }
 
-function showCoverPreview(src) {
-  document.getElementById('cover-preview-img').src = src;
-  document.getElementById('cover-preview').hidden  = false;
-  document.getElementById('upzone').style.display  = 'none';
+function showCoverPreview(src, prefix = '') {
+  document.getElementById(`${prefix}cover-preview-img`).src = src;
+  document.getElementById(`${prefix}cover-preview`).hidden  = false;
+  document.getElementById(`${prefix}upzone`).style.display  = 'none';
 }
 
-function hideCoverPreview() {
-  document.getElementById('cover-preview').hidden = true;
-  document.getElementById('cover-preview-img').src = '';
-  document.getElementById('upzone').style.display = '';
-  S.coverB64 = null;
+function hideCoverPreview(prefix = '') {
+  document.getElementById(`${prefix}cover-preview`).hidden = true;
+  document.getElementById(`${prefix}cover-preview-img`).src = '';
+  document.getElementById(`${prefix}upzone`).style.display = '';
+  if (prefix === 'wl-') S.wlCoverB64 = null; else S.coverB64 = null;
 }
 
 /* ─────────────────────────────────────────────────────────────────────
@@ -1846,7 +1852,19 @@ function wireEvents() {
     S.coverB64  = b64;
     showCoverPreview(b64);
   });
-  document.getElementById('btn-cover-remove').addEventListener('click', hideCoverPreview);
+  document.getElementById('btn-cover-remove').addEventListener('click', () => hideCoverPreview());
+
+  // Okładka w watchliście (Serial/Film) — analogicznie do modala seriali
+  document.getElementById('wl-upzone').addEventListener('click', () => document.getElementById('wl-inp-cover').click());
+  document.getElementById('wl-inp-cover').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 8 * 1024 * 1024) { showToast('Plik za duży — max 8 MB'); return; }
+    const b64    = await downscaleImage(file, 600, 0.82);
+    S.wlCoverB64 = b64;
+    showCoverPreview(b64, 'wl-');
+  });
+  document.getElementById('wl-btn-cover-remove').addEventListener('click', () => hideCoverPreview('wl-'));
 
   // TMDB search (series modal) - debounced
   let tmdbTimer;

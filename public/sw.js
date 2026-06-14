@@ -3,7 +3,7 @@
 //  Author: SushiPL-coder | https://github.com/SushiPL-coder/Serialist | MIT License
 // ══════════════════════════════════════════════════════════════════════
 
-const CACHE   = 'serialist-v6';  // ← zmień przy każdym deploymencie
+const CACHE   = 'serialist-v7';  // ← zmień przy każdym deploymencie
 const ASSETS  = ['/', '/index.html', '/style.css', '/app.js', '/manifest.json',
                  '/icons/icon-192.svg', '/icons/icon-512.svg'];
 
@@ -60,8 +60,8 @@ self.addEventListener('push', e => {
   e.waitUntil(
     self.registration.showNotification(data.title, {
       body:    data.body,
-      icon:    '/icons/icon-192.svg',
-      badge:   '/icons/icon-192.svg',
+      icon:    '/icons/icon-192.png',   // SVG bywa nieobsługiwane w systemowych powiadomieniach (Android/iOS)
+      badge:   '/icons/icon-192.png',   // małe monochromatyczne na Androidzie — system i tak je przemaluje
       tag:     data.tag || 'serialist-episode',
       data:    { url: data.url || '/' },
       actions: [
