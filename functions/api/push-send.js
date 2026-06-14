@@ -36,6 +36,20 @@ export async function onRequestGet({ request, env }) {
     }, 500);
   }
 
+  // Debug: ?jwt=1 → zwróć świeży JWT zbudowany na produkcyjnych wartościach env
+  if (url.searchParams.has('jwt')) {
+    const jwt = await buildVapidJwt(env, 'https://web.push.apple.com/dummy');
+    const [h, c] = jwt.split('.');
+    const dec = p => JSON.parse(new TextDecoder().decode(b64uToBytes(p)));
+    return json({
+      jwt,
+      k: (env.VAPID_PUBLIC_KEY || '').trim(),
+      header: dec(h),
+      claims: dec(c),
+      sigBytes: b64uToBytes(jwt.split('.')[2]).length,
+    });
+  }
+
   if (url.searchParams.has('reset')) {
     await env.DB.prepare('UPDATE schedule SET notified = 0').run();
   }
@@ -77,7 +91,7 @@ async function sendDueNotifications(env, testMode) {
     ).bind(r.user_id).all();
 
     const payload = {
-      title: `📺 ${r.title}`,
+      title: r.title,
       body:  `${r.label ? r.label + ' — ' : ''}premiera o ${r.time}!`,
       url:   '/',
       tag:   `serialist-${r.date}-${r.title}`.slice(0, 64),
