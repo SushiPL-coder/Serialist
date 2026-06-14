@@ -771,7 +771,7 @@ textarea.fi { resize: none; }
   display: none; flex-shrink: 0; align-items: center; gap: 12px;
   background: linear-gradient(135deg, var(--surface), var(--card));
   border-bottom: 1px solid var(--bs);
-  padding: 10px 14px;
+  padding: 10px 14px; padding-top: calc(var(--safe-top) + 10px);
   animation: slideDown .3s ease;
 }
 .pwa-banner.show { display: flex; }
@@ -794,7 +794,8 @@ textarea.fi { resize: none; }
 /* ── SW Update Toast ────────────────────────────────────────────────── */
 .update-bar {
   display: none; flex-shrink: 0; align-items: center; justify-content: space-between;
-  gap: 10px; background: var(--a); padding: 10px 16px;
+  gap: 10px; background: var(--a);
+  padding: 10px 16px; padding-top: calc(var(--safe-top) + 10px);
   font-size: 13px; font-weight: 600; color: #fff;
 }
 .update-bar.show { display: flex; }
