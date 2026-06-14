@@ -5,6 +5,23 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [0.5.1] – 2026-06-13
+
+### Fixed
+- **KRYTYCZNE: odhaczanie odcinków całkowicie nie działało** – v0.5.0 wprowadziło drugą funkcję `toggleWatched(id)` (dla filmów w watchliście), która w JS nadpisała istniejącą `toggleWatched(seriesId, dateStr)` używaną przez kalendarz i „Do nadrobienia”. Kliknięcie ✓ wywoływało wersję dla watchlisty (zwracała `undefined` dla ID serialu) – stąd zero efektu wizualnego i komunikat „Oznaczono jako nieobejrzane” przy każdym kliknięciu. Funkcja dla filmów przemianowana na `toggleWlWatched`.
+- **Wybór okładki z TMDB w watchliście trafiał w zły podgląd** – `pickTMDB` zawsze pisał do `S.coverB64` / podglądu modala seriali, niezależnie od tego, który modal był otwarty. Teraz rozróżnia kontener wyników (`wl-tmdb-results` → `S.wlCoverB64` + podgląd watchlisty).
+- **Dzwonek zawsze miał czerwoną kropkę** – `renderNotifPanel` zapalał wskaźnik, gdy cokolwiek nadchodziło w ciągu 7 dni (czyli praktycznie zawsze). Kropka pojawia się teraz tylko gdy coś nadejdzie w ciągu 24h.
+- **Emoji 📺 w tytule powiadomienia push** – usunięte (notyfikacja i tak ma ikonę aplikacji); ikona/badge w Service Workerze przełączone z SVG na PNG (`icon-192.png`) dla szerszej zgodności z systemowymi powiadomieniami Android/iOS.
+- **Etykieta „30 min przed emisją”** była martwym tekstem z wcześniejszej wersji – realna logika crona wysyła do godziny przed emisją (zależnie od częstotliwości zewnętrznego crona). Etykieta zmieniona na „Do godziny przed emisją”. Dla węższego okna ustaw cron na cron-job.org na np. co 15 min – pierwsze trafienie w okno ≤60 min wypadnie wtedy bliżej 45–60 min przed, a nie dokładnie w momencie premiery.
+
+### Added
+- **Własna okładka w watchliście** (Serial i Film) – ten sam upload/podgląd/usuwanie co w modalu seriali (max 8 MB, skalowane do 600 px JPEG), niezależny stan `S.wlCoverB64`.
+
+### Changed
+- Service worker cache bumped to `serialist-v7`.
+
+---
+
 ## [0.5.0] – 2026-06-13
 
 ### Added
