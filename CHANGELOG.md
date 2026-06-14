@@ -5,6 +5,16 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) · Versioning: 
 
 ---
 
+## [0.5.2] – 2026-06-13
+
+### Fixed
+- **Pasek „Nowa wersja dostępna” (i banery instalacji) lądowały pod zegarem/Dynamic Island na iOS** – `.update-bar` i `.pwa-banner` są pierwszymi elementami w `#app`, ale w przeciwieństwie do `.hdr` nie miały `padding-top: env(safe-area-inset-top)`. Przycisk „Odśwież” był częściowo niewidoczny i nieklikalny pod statusbarem. Dodano `padding-top: calc(var(--safe-top) + 10px)` do obu.
+
+### Changed
+- Service worker cache bumped to `serialist-v8`.
+
+---
+
 ## [0.5.1] – 2026-06-13
 
 ### Fixed
